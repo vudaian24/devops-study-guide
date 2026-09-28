@@ -57,7 +57,7 @@
 }
 
 /* ---------- 2. Base ---------- */
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html { scroll-behavior: smooth; }
 
@@ -69,6 +69,8 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  overflow-wrap: break-word;
 }
 
 code, .mono { font-family: var(--mono); }
@@ -219,7 +221,8 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
 .rule-list li::marker { color: var(--accent); font-weight: 700; }
 
 /* ---------- 6. Bank layout ---------- */
-.bank { display: grid; grid-template-columns: 236px 1fr; gap: 24px; align-items: start; }
+.bank { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; align-items: start; }
+.bank > * { min-width: 0; }   /* không có dòng này, dải chip cuộn ngang sẽ kéo phình cả grid */
 
 .sidebar { position: sticky; top: 74px; }
 .side-group + .side-group { margin-top: 18px; }
@@ -389,6 +392,7 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
 .pr-body[hidden] { display: none; }
 
 .pr-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+#prShuffle { margin-left: auto; }
 .btn {
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
   padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
@@ -408,9 +412,11 @@ kbd {
 }
 
 /* ---------- 10. Responsive ---------- */
+
+/* --- Máy tính bảng: bỏ cột sidebar, dồn về một cột --- */
 @media (max-width: 1000px) {
   .two-col { grid-template-columns: 1fr; }
-  .bank { grid-template-columns: 1fr; }
+  .bank { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; }
   .side-nav { display: flex; flex-wrap: wrap; gap: 6px; }
   .side-group { display: contents; }
@@ -418,23 +424,99 @@ kbd {
   .side-link { width: auto; background: var(--surface); border: 1px solid var(--border); }
 }
 
+/* --- Điện thoại --- */
 @media (max-width: 760px) {
-  body { font-size: 14.5px; }
-  .topbar { flex-wrap: wrap; gap: 12px; padding: 11px 16px; }
-  .tabs { margin-left: 0; width: 100%; justify-content: space-between; }
-  .tab { flex: 1; text-align: center; padding: 8px 6px; font-size: 12.8px; }
+
+  body { font-size: 15px; line-height: 1.66; }
+
+  /* Thanh trên: hai hàng thay vì ba — nút đổi nền về cùng hàng với tiêu đề */
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 9px 10px;
+    padding: 9px 14px;
+  }
+  .brand { grid-area: 1 / 1; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 9px; font-size: 11.5px; }
+  .brand h1 { font-size: 14.5px; }
   .brand-sub { display: none; }
-  .wrap { padding: 20px 14px 70px; }
-  .panel { padding: 16px; border-radius: 12px; }
+  .icon-btn { grid-area: 1 / 2; width: 34px; height: 34px; }
+  .tabs { grid-area: 2 / 1 / 3 / 3; width: 100%; margin: 0; padding: 3px; }
+  .tab { flex: 1; text-align: center; padding: 9px 4px; font-size: 13px; }
+
+  .wrap { padding: 18px 14px 64px; }
+  .panel { padding: 15px 16px; border-radius: 12px; }
+
+  /* Chủ đề: dải cuộn ngang một hàng, tràn sát mép máy */
+  .sidebar { margin: 0 -14px 16px; min-width: 0; }
+  .side-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 14px;
+    scroll-snap-type: x proximity;
+  }
+  .side-nav::-webkit-scrollbar { display: none; }
+  .side-head { display: none; }
+  .side-link { flex: none; white-space: nowrap; padding: 7px 13px; scroll-snap-align: start; }
+
+  /* Thanh công cụ: ô tìm kiếm riêng một hàng */
+  .toolbar { gap: 7px; margin-bottom: 13px; }
+  .search { flex: 1 1 100%; min-width: 0; }
+  .search input { font-size: 16px; }   /* dưới 16px thì iOS tự phóng to trang khi gõ */
+  .seg { flex: 1 1 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .seg::-webkit-scrollbar { display: none; }
+  .seg button { flex: 1 1 auto; white-space: nowrap; padding: 7px 9px; font-size: 12.5px; }
+  .toggle { flex: 1 1 auto; justify-content: center; padding: 8px 11px; }
+  #btnMoHet { flex: 0 0 auto; padding: 8px 14px !important; }
+
+  /* Thẻ câu hỏi: mũi tên nằm cạnh câu hỏi, nút trạng thái chỉ hiện khi mở thẻ
+     — nhờ vậy lúc lướt tìm câu, mỗi màn hình thấy được nhiều câu hơn hẳn */
+  .card { border-radius: 12px; margin-bottom: 9px; }
+  .card-head { flex-wrap: wrap; gap: 9px 8px; padding: 12px 14px; }
+  .card-main { flex: 1 1 calc(100% - 30px); }
+  .card-q { font-size: 15.4px; }
+  .chev { flex: none; align-self: flex-start; margin: 2px 0 0; padding: 4px; }
+  .status-set { flex: 1 1 100%; order: 3; flex-direction: row; gap: 6px; }
+  .status-set button { flex: 1; width: auto; height: 38px; font-size: 14px; }
+  .card:not(.is-open) .status-set { display: none; }
+  .card-body { padding: 15px 14px 16px; }
+  .steps li { padding-left: 27px; font-size: 14.6px; }
+  .trap { font-size: 14px; padding: 12px 13px; }
+  .blk + .blk { margin-top: 15px; }
+
+  /* Mã dài phải xuống dòng — không thì bị .card cắt mất chữ */
+  code { white-space: normal; overflow-wrap: anywhere; }
+  .chip { overflow-wrap: anywhere; }
+
+  /* Tổng quan */
   .match-row { grid-template-columns: 1fr; gap: 5px; padding: 10px 0; }
   .match-tag { text-align: left; }
-  .card-head { padding: 13px 14px; gap: 10px; }
-  .card-body { padding: 14px 14px 16px; }
-  .card-q { font-size: 14.6px; }
-  .status-set { flex-direction: column; }
-  .pr-stage { padding: 24px 18px; }
-  .pr-q { font-size: 18px; }
-  .practice-wrap { padding: 24px 14px 70px; }
+  .rm-item { flex-wrap: wrap; }
+  .rm-gio { margin: 3px 0 0 28px; }
+  .risk-noi { font-size: 13.8px; }
+  .rule-list li { font-size: 14.2px; }
+
+  /* Luyện tập */
+  .practice-wrap { padding: 22px 14px 64px; }
+  .pr-stage { padding: 22px 17px; border-radius: 12px; }
+  .pr-q { font-size: 18.5px; }
+  .pr-actions { gap: 8px; }
+  .pr-actions .btn { flex: 1 1 calc(50% - 4px); padding: 12px 8px; }
+  #prShuffle { flex-basis: 100%; margin-left: 0; }
+  .pr-opts { flex-direction: column; gap: 10px; }
+  .only-desktop { display: none; }   /* phím tắt không dùng được trên điện thoại */
+}
+
+/* --- Điện thoại nhỏ (iPhone SE, máy 360px) --- */
+@media (max-width: 400px) {
+  .tab { font-size: 12.2px; padding: 9px 2px; }
+  .brand h1 { font-size: 13.5px; }
+  .card-q { font-size: 15px; }
+  .pr-q { font-size: 17px; }
+  .side-link { padding: 7px 11px; font-size: 13px; }
 }
 
 /* ---------- 11. Print ---------- */
@@ -447,7 +529,7 @@ kbd {
   body { background: #fff; font-size: 11pt; }
   .topbar, .toolbar, .sidebar, .status-set, .chev, .icon-btn, .pr-actions, .pr-opts, .pr-hint, .result-line { display: none !important; }
   .view { display: block !important; }
-  .bank { grid-template-columns: 1fr; }
+  .bank { grid-template-columns: minmax(0, 1fr); }
   .wrap { max-width: none; padding: 0; }
   .card { break-inside: avoid; box-shadow: none; margin-bottom: 8pt; border: 1px solid #ccc; }
   .card .card-body { display: block !important; }
