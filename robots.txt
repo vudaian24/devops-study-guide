@@ -1,0 +1,3 @@
+# Trang ôn phỏng vấn cá nhân — không muốn xuất hiện trên công cụ tìm kiếm.
+User-agent: *
+Disallow: /
