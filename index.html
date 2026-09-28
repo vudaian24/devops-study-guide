@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview War Room — DevOps Engineer</title>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="description" content="Bộ ôn phỏng vấn vị trí DevOps Engineer: 91 câu hỏi, phân tích độ khớp CV và JD, chế độ luyện tập.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+
+<!-- ============ THANH TRÊN ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">WR</div>
+    <div>
+      <h1>Interview War Room</h1>
+      <p class="brand-sub">DevOps Engineer · 25–35 triệu · Long Biên, Hà Nội</p>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab is-active" data-view="dashboard">Tổng quan</button>
+    <button class="tab" data-view="bank">Ngân hàng câu hỏi</button>
+    <button class="tab" data-view="practice">Luyện tập</button>
+  </nav>
+  <button class="icon-btn" id="themeToggle" title="Đổi nền sáng / tối">☀</button>
+</header>
+
+<main>
+
+<!-- ============ MÀN 1 · TỔNG QUAN ============ -->
+<section class="view is-active" id="view-dashboard">
+  <div class="wrap dash-grid">
+
+    <div class="panel">
+      <h2 class="section-title">Độ khớp CV ↔ JD</h2>
+      <div id="matchList"></div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h2 class="section-title">Ba rủi ro phải có kịch bản sẵn</h2>
+        <div id="riskList"></div>
+      </div>
+      <div class="panel">
+        <h2 class="section-title">Tiến độ ôn</h2>
+        <div id="progressBox"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="section-title">Lộ trình ôn theo thứ tự ưu tiên</h2>
+      <div id="roadmapList"></div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h2 class="section-title">Khung trả lời mọi câu tình huống</h2>
+        <ol class="rule-list" id="frameworkList"></ol>
+      </div>
+      <div class="panel">
+        <h2 class="section-title">Ba nguyên tắc mang vào phòng</h2>
+        <ol class="rule-list" id="ruleList"></ol>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MÀN 2 · NGÂN HÀNG CÂU HỎI ============ -->
+<section class="view" id="view-bank">
+  <div class="wrap">
+    <div class="bank">
+
+      <aside class="sidebar">
+        <nav class="side-nav" id="sideNav"></nav>
+      </aside>
+
+      <div>
+        <div class="toolbar">
+          <label class="search">
+            <span style="color:var(--muted)">⌕</span>
+            <input type="search" id="searchInput" placeholder="Tìm trong câu hỏi, từ khoá, dàn ý…" autocomplete="off">
+          </label>
+          <div class="seg" id="segUu">
+            <button data-uu="all" class="is-active">Tất cả</button>
+            <button data-uu="gap">Gap</button>
+            <button data-uu="high">Hay hỏi</button>
+            <button data-uu="strong">Thế mạnh</button>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="chkChuaThuoc"> Chỉ câu chưa thuộc
+          </label>
+          <button class="btn btn-ghost" id="btnMoHet" style="padding:8px 14px;font-size:13px">Mở hết</button>
+        </div>
+
+        <div class="result-line" id="resultLine"></div>
+        <div id="cardList"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ MÀN 3 · LUYỆN TẬP ============ -->
+<section class="view" id="view-practice">
+  <div class="practice-wrap">
+
+    <div class="pr-bar">
+      <span class="pr-count" id="prCount"></span>
+      <span class="pr-timer" id="prTimer">00:00</span>
+    </div>
+
+    <div class="pr-stage" id="prStage">
+      <div class="card-meta" id="prMeta"></div>
+      <h2 class="pr-q" id="prQ"></h2>
+      <div class="pr-body" id="prBody" hidden></div>
+      <div class="pr-actions">
+        <button class="btn" id="prReveal">Hiện gợi ý</button>
+        <button class="btn btn-primary" id="prNext">Câu tiếp →</button>
+        <button class="btn btn-ghost" id="prPrev">← Quay lại</button>
+        <button class="btn btn-ghost" id="prShuffle" style="margin-left:auto">⟳ Trộn lại</button>
+      </div>
+    </div>
+
+    <div class="pr-opts">
+      <label class="toggle" style="background:transparent;border:0;padding:0">
+        <input type="checkbox" id="prUuTien" checked> Ưu tiên câu 🔴 và câu chưa thuộc
+      </label>
+      <label class="toggle" style="background:transparent;border:0;padding:0">
+        <input type="checkbox" id="prTron" checked> Trộn ngẫu nhiên
+      </label>
+    </div>
+
+    <p class="pr-hint">
+      <kbd>Space</kbd> hiện gợi ý · <kbd>→</kbd> câu tiếp · <kbd>←</kbd> quay lại
+      &nbsp;·&nbsp; Đồng hồ chuyển vàng ở 1:30 và đỏ ở 2:00 — câu trả lời tốt thường gọn trong khoảng đó.
+    </p>
+
+  </div>
+</section>
+
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
