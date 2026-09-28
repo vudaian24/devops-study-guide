@@ -1,0 +1,12 @@
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+
+# Trình soạn thảo
+.vscode/
+.idea/
+*.swp
+
+# Công cụ
+.claude/
+node_modules/
