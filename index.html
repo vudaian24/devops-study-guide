@@ -26,8 +26,33 @@
     <button class="tab" data-view="bank">Ngân hàng câu hỏi</button>
     <button class="tab" data-view="practice">Luyện tập</button>
   </nav>
+  <button class="icon-btn" id="audioToggle" title="Bảng điều khiển giọng đọc">🔊</button>
   <button class="icon-btn" id="themeToggle" title="Đổi nền sáng / tối">☀</button>
 </header>
+
+<!-- ============ THANH ÂM THANH ============ -->
+<div class="audiobar" id="audioBar" hidden>
+  <div class="audiobar-in">
+    <span class="am-status" id="amStatus">Chưa đọc gì</span>
+    <button class="btn-am" id="btnDung" disabled>■ Dừng</button>
+    <button class="btn-am" id="btnCai">Cài đặt giọng</button>
+  </div>
+  <div class="am-cai" id="amCai" hidden>
+    <label class="am-field">Giọng
+      <select id="selGiong"></select>
+    </label>
+    <label class="am-field">Tốc độ
+      <select id="selTocDo">
+        <option value="0.8">Chậm</option>
+        <option value="1" selected>Bình thường</option>
+        <option value="1.2">Nhanh</option>
+        <option value="1.5">Rất nhanh</option>
+      </select>
+    </label>
+    <button class="btn-am" id="btnThu">Nghe thử</button>
+  </div>
+  <p class="am-canh" id="amCanh" hidden></p>
+</div>
 
 <main>
 
@@ -126,6 +151,25 @@
       </div>
     </div>
 
+    <div class="pr-audio" id="prAudio">
+      <div class="pr-audio-row">
+        <button class="btn" id="prDocHoi">🔊 Đọc câu hỏi</button>
+        <button class="btn" id="prDocY">🔊 Đọc gợi ý</button>
+        <button class="btn btn-primary" id="prRanhTay">▶ Chế độ rảnh tay</button>
+      </div>
+      <div class="pr-audio-row pr-audio-opt">
+        <label class="toggle"><input type="checkbox" id="prTuDoc"> Tự đọc khi sang câu mới</label>
+        <label class="am-field">Chờ bạn trả lời
+          <select id="prCho">
+            <option value="15">15 giây</option>
+            <option value="25" selected>25 giây</option>
+            <option value="40">40 giây</option>
+            <option value="60">60 giây</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
     <div class="pr-opts">
       <label class="toggle" style="background:transparent;border:0;padding:0">
         <input type="checkbox" id="prUuTien" checked> Ưu tiên câu 🔴 và câu chưa thuộc
@@ -146,6 +190,7 @@
 </main>
 
 <script src="js/data.js"></script>
+<script src="js/tts.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

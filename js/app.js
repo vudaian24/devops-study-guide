@@ -46,6 +46,13 @@ const fmt = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
 
 const trangThai = id => S.status[id] || "new";
 
+/* Thanh âm thanh và sidebar dính ngay dưới thanh trên — đo chiều cao thật
+   thay vì đặt cứng, vì thanh trên cao khác nhau ở mỗi mốc màn hình. */
+function doThanhTren() {
+  const h = document.querySelector(".topbar").getBoundingClientRect().height;
+  document.documentElement.style.setProperty("--topbar-cao", Math.round(h) + "px");
+}
+
 /* ---------- Theme ---------- */
 function applyTheme() {
   document.documentElement.setAttribute("data-theme", S.theme);
@@ -55,6 +62,7 @@ function applyTheme() {
 
 /* ---------- Chuyển màn ---------- */
 function showView(v) {
+  if (S.view === "practice" && v !== "practice") dungAm();
   S.view = v; save();
   $$(".view").forEach(el => el.classList.toggle("is-active", el.id === "view-" + v));
   $$(".tab").forEach(b => b.classList.toggle("is-active", b.dataset.view === v));
@@ -184,6 +192,8 @@ function cardHTML(q) {
         <p class="card-q">${fmt(q.ch)}</p>
       </div>
       <div class="status-set">${nutTT}</div>
+      <button class="tts-btn" data-doc="${q.id}"
+        title="Nghe câu hỏi — thẻ đang mở thì nghe cả gợi ý">🔊</button>
       <span class="chev">▼</span>
     </div>
     <div class="card-body">
@@ -272,6 +282,11 @@ function prShow() {
   $("#prBody").hidden = true;
   $("#prReveal").textContent = "Hiện gợi ý";
   prTimerReset();
+
+  const tuDoc = $("#prTuDoc");
+  if (tuDoc && tuDoc.checked && !ranhTayChay) {
+    TTS.doc(`Câu ${PR.i + 1}. ${loiCauHoi(q)}`, `Câu ${PR.i + 1}`);
+  }
 }
 
 function prTimerReset() {
@@ -291,6 +306,130 @@ function prNext(buoc = 1) {
   PR.i = (PR.i + buoc + PR.queue.length) % PR.queue.length;
   prShow();
 }
+
+/* ============================================================
+   GIỌNG ĐỌC
+   ============================================================ */
+
+/* Soạn lời để đọc — khác với chữ hiển thị trên màn hình */
+const loiCauHoi = q => `Chủ đề ${q.chuDe}. ${q.ch}`;
+
+function loiGoiY(q) {
+  const laHoiNguoc = q.nhom === "hoinguoc";
+  let s = (laHoiNguoc ? "Nghe gì trong câu trả lời của họ: " : "Từ khoá phải nói: ")
+        + q.tk.join(", ") + ". ";
+  s += (laHoiNguoc ? "Vì sao nên hỏi. " : "Dàn ý trả lời. ")
+     + q.dy.map((d, i) => `Ý ${i + 1}. ${d}`).join(" ");
+  if (q.bay) s += ` Bẫy cần tránh. ${q.bay}`;
+  return s;
+}
+
+/* Dải trạng thái hiện mỗi khi có gì đó đang đọc;
+   bảng cài đặt chỉ mở khi người dùng chủ động bấm. */
+function moThanhAm(hien) {
+  $("#audioBar").hidden = !hien;
+  $("#audioToggle").classList.toggle("on", hien);
+}
+
+function moCaiDat(hien) {
+  const c = $("#amCai");
+  const mo = hien === undefined ? c.hidden : hien;
+  if (mo) moThanhAm(true);
+  c.hidden = !mo;
+  $("#btnCai").classList.toggle("on", mo);
+}
+
+function napGiongUI() {
+  const sel = $("#selGiong"), canh = $("#amCanh");
+  const ds = TTS.danhSachGiong();
+
+  if (!ds.length) {
+    sel.innerHTML = "<option>Chưa tìm thấy giọng nào</option>";
+    sel.disabled = true;
+  } else {
+    const vi = ds.filter(v => /^vi/i.test(v.lang));
+    const khac = ds.filter(v => !/^vi/i.test(v.lang));
+    const o = v => `<option value="${esc(v.name)}">${esc(v.name)} — ${esc(v.lang)}</option>`;
+    sel.innerHTML =
+      (vi.length ? `<optgroup label="Tiếng Việt">${vi.map(o).join("")}</optgroup>` : "") +
+      (khac.length ? `<optgroup label="Ngôn ngữ khác">${khac.map(o).join("")}</optgroup>` : "");
+    sel.disabled = false;
+    const g = TTS.giongDangDung();
+    if (g) sel.value = g.name;
+  }
+
+  if (!TTS.hoTro) {
+    canh.hidden = false;
+    canh.innerHTML = "Trình duyệt này không hỗ trợ đọc thành tiếng. Thử Chrome, Safari hoặc Edge.";
+  } else if (!ds.length) {
+    canh.hidden = false;
+    canh.innerHTML = "Máy chưa có giọng đọc nào. <b>Android:</b> cài Google Text-to-speech rồi tải gói tiếng Việt. "
+      + "<b>iPhone:</b> Cài đặt → Trợ năng → Nội dung nói → Giọng nói → Tiếng Việt. "
+      + "<b>Linux:</b> <code>sudo apt install speech-dispatcher espeak-ng</code> rồi mở lại trình duyệt.";
+  } else if (!TTS.coGiongViet()) {
+    canh.hidden = false;
+    canh.innerHTML = "Chưa có giọng <b>tiếng Việt</b> — máy sẽ đọc bằng giọng nước ngoài nên rất khó nghe. "
+      + "Cài thêm gói giọng tiếng Việt cho hệ điều hành rồi mở lại trang.";
+  } else {
+    canh.hidden = true;
+  }
+}
+
+/* Nút loa trên thẻ: thẻ đóng thì chỉ đọc câu hỏi, thẻ mở thì đọc cả gợi ý,
+   giữ đúng nguyên tắc tự trả lời trước khi xem đáp án. */
+let dangDocId = null;
+async function docThe(id, the) {
+  if (dangDocId === id && TTS.dangDoc()) { TTS.dung(); return; }
+  const q = QUESTIONS.find(x => x.id === id);
+  if (!q) return;
+  dangDocId = id;
+  moThanhAm(true);
+  const daMo = the && the.classList.contains("is-open");
+  await TTS.doc(loiCauHoi(q) + (daMo ? " " + loiGoiY(q) : ""), "Câu " + q.id);
+  dangDocId = null;
+}
+
+/* Chế độ rảnh tay: đọc câu hỏi → im lặng cho bạn trả lời → đọc gợi ý → câu tiếp */
+let ranhTayChay = false;
+
+function veNutRanhTay() {
+  const b = $("#prRanhTay");
+  b.textContent = ranhTayChay ? "■ Dừng rảnh tay" : "▶ Chế độ rảnh tay";
+  b.classList.toggle("btn-primary", !ranhTayChay);
+}
+
+async function ranhTay() {
+  ranhTayChay = true;
+  veNutRanhTay();
+  moThanhAm(true);
+
+  while (ranhTayChay) {
+    const q = PR.queue[PR.i];
+    if (!q) break;
+
+    $("#prBody").hidden = true;
+    $("#prReveal").textContent = "Hiện gợi ý";
+    if (!await TTS.doc(`Câu ${PR.i + 1}. ${loiCauHoi(q)}`, `Câu ${PR.i + 1}/${PR.queue.length}`)) break;
+    if (!ranhTayChay) break;
+
+    const het = await TTS.cho(Number($("#prCho").value), n => {
+      $("#amStatus").textContent = `Tới lượt bạn trả lời — còn ${n} giây`;
+    });
+    if (!het || !ranhTayChay) break;
+
+    $("#prBody").hidden = false;
+    $("#prReveal").textContent = "Ẩn gợi ý";
+    if (!await TTS.doc("Gợi ý. " + loiGoiY(q), "Gợi ý câu " + q.id)) break;
+    if (!ranhTayChay) break;
+
+    prNext(1);
+  }
+
+  ranhTayChay = false;
+  veNutRanhTay();
+}
+
+function dungAm() { ranhTayChay = false; TTS.dung(); veNutRanhTay(); }
 
 /* ============================================================
    GẮN SỰ KIỆN
@@ -334,6 +473,12 @@ function bind() {
 
   /* Card: mở/đóng + đổi trạng thái */
   $("#cardList").addEventListener("click", e => {
+    const loa = e.target.closest("[data-doc]");
+    if (loa) {
+      e.stopPropagation();
+      docThe(loa.dataset.doc, loa.closest(".card"));
+      return;
+    }
     const nut = e.target.closest("[data-status]");
     if (nut) {
       e.stopPropagation();
@@ -366,6 +511,44 @@ function bind() {
       x.style.cssText = x === b ? "border-color:var(--accent);color:var(--accent)" : "");
   });
 
+  /* Thanh âm thanh */
+  TTS.khiDoiTrangThai((tt, nhan) => {
+    if (tt === "giong") { napGiongUI(); return; }
+    const dang = tt === "doc";
+    $("#btnDung").disabled = !dang;
+    $("#amStatus").textContent = dang ? `Đang đọc: ${nhan || "…"}` : "Chưa đọc gì";
+    document.body.classList.toggle("dang-doc", dang);
+    if (!dang) {
+      veNutRanhTay();
+      if ($("#amCai").hidden && !ranhTayChay) setTimeout(() => {
+        if (!TTS.dangDoc() && $("#amCai").hidden) moThanhAm(false);
+      }, 2500);
+    }
+  });
+
+  $("#audioToggle").addEventListener("click", () => moCaiDat());
+  $("#btnCai").addEventListener("click", () => moCaiDat());
+  $("#btnDung").addEventListener("click", dungAm);
+  $("#selGiong").addEventListener("change", e => TTS.datGiong(e.target.value));
+  $("#selTocDo").addEventListener("change", e => TTS.datTocDo(e.target.value));
+  $("#btnThu").addEventListener("click", () =>
+    TTS.doc("Xin chào. Đây là giọng đọc sẽ dùng để đọc câu hỏi phỏng vấn cho bạn nghe.", "Nghe thử"));
+
+  /* Giọng đọc trong màn luyện tập */
+  $("#prDocHoi").addEventListener("click", () => {
+    const q = PR.queue[PR.i];
+    if (q) { moThanhAm(true); TTS.doc(`Câu ${PR.i + 1}. ${loiCauHoi(q)}`, `Câu ${PR.i + 1}`); }
+  });
+  $("#prDocY").addEventListener("click", () => {
+    const q = PR.queue[PR.i];
+    if (!q) return;
+    $("#prBody").hidden = false;
+    $("#prReveal").textContent = "Ẩn gợi ý";
+    moThanhAm(true);
+    TTS.doc("Gợi ý. " + loiGoiY(q), "Gợi ý câu " + q.id);
+  });
+  $("#prRanhTay").addEventListener("click", () => ranhTayChay ? dungAm() : ranhTay());
+
   /* Phím tắt trong chế độ luyện */
   document.addEventListener("keydown", e => {
     if (S.view !== "practice") return;
@@ -379,5 +562,9 @@ function bind() {
 /* ---------- Khởi động ---------- */
 applyTheme();
 bind();
+doThanhTren();
+addEventListener("resize", doThanhTren);
+napGiongUI();
+setTimeout(napGiongUI, 800);   // Chrome nạp giọng chậm một nhịp
 renderCards();
 showView(S.view || "dashboard");

@@ -21,6 +21,8 @@ Không cần server, không cần cài gì, chạy được offline.
 | **Ngân hàng câu hỏi** | Ôn theo chủ đề, lọc theo mức ưu tiên, đánh dấu đã thuộc |
 | **Luyện tập** | Trước ngày phỏng vấn — một câu một lần, tự trả lời thành tiếng, bấm giờ |
 
+Nghe thay vì đọc: bấm 🔊 trên từng thẻ, hoặc bật **Chế độ rảnh tay** ở màn Luyện tập.
+
 ## Cách dùng hiệu quả
 
 1. **Đọc câu hỏi trước, tự trả lời trong đầu (hoặc nói thành tiếng), rồi mới bấm mở gợi ý.**
@@ -32,6 +34,36 @@ Không cần server, không cần cài gì, chạy được offline.
 
 Tiến độ lưu trong `localStorage` của trình duyệt — đóng mở lại vẫn còn,
 nhưng **không đồng bộ giữa các máy** và sẽ mất nếu bạn xoá dữ liệu duyệt web.
+
+## Nghe thay vì đọc
+
+Trang dùng Web Speech API có sẵn trong trình duyệt — không backend, không API key,
+chạy được cả khi offline miễn là máy có giọng đọc.
+
+- **Nút 🔊 trên mỗi thẻ** — thẻ đang đóng thì chỉ đọc câu hỏi, thẻ mở thì đọc cả gợi ý.
+  Giữ đúng nguyên tắc tự trả lời trước khi xem đáp án.
+- **Chế độ rảnh tay** (màn Luyện tập) — đọc câu hỏi → im lặng cho bạn trả lời thành tiếng
+  → đọc gợi ý → tự sang câu tiếp, lặp mãi cho tới khi bạn bấm dừng. Dùng được khi đang
+  đi đường, nấu cơm hay tập thể dục.
+- **Tự đọc khi sang câu mới** — bật lên thì mỗi lần bấm "Câu tiếp" là máy đọc luôn.
+- Nút 🔊 trên thanh trên mở phần chọn **giọng** và **tốc độ**; lựa chọn được ghi nhớ.
+
+### Cài giọng tiếng Việt
+
+| Máy | Cách làm |
+|---|---|
+| **Android** | Cài *Google Text-to-speech*, vào Cài đặt → Ngôn ngữ → Đầu ra TTS, tải gói tiếng Việt |
+| **iPhone** | Cài đặt → Trợ năng → Nội dung nói → Giọng nói → Tiếng Việt |
+| **Linux** | `sudo apt install speech-dispatcher espeak-ng` rồi mở lại trình duyệt |
+| **Windows** | Settings → Time & language → Speech → Add voices → Vietnamese |
+
+Máy chưa có giọng nào, hoặc có giọng nhưng không có tiếng Việt, thì thanh âm thanh
+sẽ hiện lời nhắc kèm hướng dẫn thay vì đọc sai.
+
+Giọng trên điện thoại (Google, Apple) nghe tự nhiên hơn hẳn giọng máy espeak-ng
+trên Linux. Dù vậy, thuật ngữ tiếng Anh xen trong câu tiếng Việt — `CrashLoopBackOff`,
+`pg_stat_statements` — giọng nào đọc cũng méo. Phần đọc hợp để **ôn lại và nhớ ý**,
+không thay được việc đọc bằng mắt lần đầu.
 
 ## Thêm hoặc sửa câu hỏi
 
@@ -66,5 +98,6 @@ interview-prep/
 ├── index.html      khung trang
 ├── css/style.css   giao diện, dark/light, responsive, bản in
 ├── js/data.js      toàn bộ nội dung — sửa ở đây
+├── js/tts.js       đọc thành tiếng (Web Speech API)
 └── js/app.js       lọc, tìm kiếm, lưu tiến độ, chế độ luyện
 ```
