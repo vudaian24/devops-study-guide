@@ -13,13 +13,12 @@ xdg-open index.html
 
 Không cần server, không cần cài gì, chạy được offline.
 
-## Ba màn hình
+## Hai màn hình
 
 | Màn | Dùng khi nào |
 |---|---|
 | **Tổng quan** | Mở đầu mỗi buổi ôn — xem chỗ nào đang hổng và học gì trước |
 | **Ngân hàng câu hỏi** | Ôn theo chủ đề, lọc theo mức ưu tiên, đánh dấu đã thuộc |
-| **Luyện tập** | Trước ngày phỏng vấn — một câu một lần, tự trả lời thành tiếng, bấm giờ |
 
 ## Cách dùng hiệu quả
 
@@ -28,7 +27,7 @@ Không cần server, không cần cài gì, chạy được offline.
 2. Đánh dấu `○ chưa học` / `◐ cần ôn` / `✓ đã thuộc` cho từng câu.
    Vòng ôn sau bật **"Chỉ câu chưa thuộc"** để không đọc lại thứ đã nắm.
 3. Ưu tiên theo màu: 🔴 **gap** học trước, 🟠 **hay hỏi** phải trôi chảy, 🟢 **thế mạnh** chủ động kéo về.
-4. Vào **Luyện tập**, bật "Ưu tiên câu 🔴", tập nói trong vòng 2 phút mỗi câu.
+4. Lọc riêng nhóm 🔴 rồi tập nói thành tiếng từng câu — câu trả lời tốt thường gọn trong 2 phút.
 
 Tiến độ lưu trong `localStorage` của trình duyệt — đóng mở lại vẫn còn,
 nhưng **không đồng bộ giữa các máy** và sẽ mất nếu bạn xoá dữ liệu duyệt web.
@@ -66,5 +65,5 @@ interview-prep/
 ├── index.html      khung trang
 ├── css/style.css   giao diện, dark/light, responsive, bản in
 ├── js/data.js      toàn bộ nội dung — sửa ở đây
-└── js/app.js       lọc, tìm kiếm, lưu tiến độ, chế độ luyện
+└── js/app.js       lọc, tìm kiếm, lưu tiến độ
 ```

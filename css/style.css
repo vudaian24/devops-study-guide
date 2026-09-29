@@ -357,44 +357,14 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty-big { font-size: 32px; margin-bottom: 10px; opacity: .5; }
 
-/* ---------- 9. Practice mode ---------- */
-.practice-wrap { max-width: 760px; margin: 0 auto; padding: 40px 22px 80px; }
-
-.pr-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; font-size: 12.5px; color: var(--muted); }
-.pr-count { font-variant-numeric: tabular-nums; }
-.pr-timer { margin-left: auto; font-family: var(--mono); font-size: 15px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.pr-timer.warn { color: var(--high); }
-.pr-timer.over { color: var(--gap); }
-
-.pr-stage {
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 3px solid var(--c);
-  border-radius: var(--radius); padding: 34px 32px; min-height: 230px;
-  display: flex; flex-direction: column;
-}
-.pr-q { font-size: 21px; font-weight: 650; line-height: 1.45; margin: 14px 0 0; }
-.pr-body { margin-top: 26px; padding-top: 22px; border-top: 1px dashed var(--border); }
-.pr-body[hidden] { display: none; }
-
-.pr-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
-#prShuffle { margin-left: auto; }
+/* ---------- 9. Nút ---------- */
 .btn {
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
   padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
   transition: all .14s;
 }
 .btn:hover { border-color: var(--text-dim); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #04161a; }
-.btn-primary:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
 .btn-ghost { background: transparent; }
-
-.pr-opts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 22px; font-size: 13px; color: var(--muted); }
-.pr-hint { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
-kbd {
-  font-family: var(--mono); font-size: 11px;
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--text-dim);
-}
 
 /* ---------- 10. Responsive ---------- */
 
@@ -480,22 +450,12 @@ kbd {
   .risk-noi { font-size: 13.8px; }
   .rule-list li { font-size: 14.2px; }
 
-  /* Luyện tập */
-  .practice-wrap { padding: 22px 14px 64px; }
-  .pr-stage { padding: 22px 17px; border-radius: 12px; }
-  .pr-q { font-size: 18.5px; }
-  .pr-actions { gap: 8px; }
-  .pr-actions .btn { flex: 1 1 calc(50% - 4px); padding: 12px 8px; }
-  #prShuffle { flex-basis: 100%; margin-left: 0; }
-  .pr-opts { flex-direction: column; gap: 10px; }
-  .only-desktop { display: none; }   /* phím tắt không dùng được trên điện thoại */
 }
 
 /* --- Điện thoại nhỏ (iPhone SE, máy 360px) --- */
 @media (max-width: 400px) {
   .tab { font-size: 12.2px; padding: 9px 2px; }
   .card-q { font-size: 15px; }
-  .pr-q { font-size: 17px; }
   .side-link { padding: 7px 11px; font-size: 13px; }
 }
 
@@ -507,7 +467,7 @@ kbd {
     --text: #000; --text-dim: #222; --muted: #555; --accent: #0a6b60;
   }
   body { background: #fff; font-size: 11pt; }
-  .topbar, .toolbar, .sidebar, .status-set, .chev, .icon-btn, .pr-actions, .pr-opts, .pr-hint, .result-line { display: none !important; }
+  .topbar, .toolbar, .sidebar, .status-set, .chev, .icon-btn, .result-line { display: none !important; }
   .view { display: block !important; }
   .bank { grid-template-columns: minmax(0, 1fr); }
   .wrap { max-width: none; padding: 0; }

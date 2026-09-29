@@ -54,12 +54,14 @@ function applyTheme() {
 }
 
 /* ---------- Chuyển màn ---------- */
+const MAN_HINH = ["dashboard", "bank"];
+
 function showView(v) {
+  if (!MAN_HINH.includes(v)) v = "dashboard";   // chặn view cũ còn sót trong localStorage
   S.view = v; save();
   $$(".view").forEach(el => el.classList.toggle("is-active", el.id === "view-" + v));
   $$(".tab").forEach(b => b.classList.toggle("is-active", b.dataset.view === v));
   if (v === "dashboard") renderDashboard();
-  if (v === "practice" && !PR.queue.length) prBuild();
   window.scrollTo({ top: 0 });
 }
 
@@ -223,76 +225,6 @@ function renderCards() {
 }
 
 /* ============================================================
-   MÀN 3 — CHẾ ĐỘ LUYỆN
-   ============================================================ */
-const PR = { queue: [], i: 0, t0: 0, tick: null, uuTien: true, tronDeu: true };
-
-function prBuild() {
-  let ds = QUESTIONS.filter(q => q.nhom !== "hoinguoc");
-
-  if (PR.tronDeu) {
-    for (let i = ds.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [ds[i], ds[j]] = [ds[j], ds[i]];
-    }
-  }
-  if (PR.uuTien) {
-    const diem = q => (q.uu === "gap" ? 0 : q.uu === "high" ? 1 : 2) + (trangThai(q.id) === "known" ? 3 : 0);
-    ds.sort((a, b) => diem(a) - diem(b));
-  }
-  PR.queue = ds;
-  PR.i = 0;
-  prShow();
-}
-
-function prShow() {
-  const q = PR.queue[PR.i];
-  if (!q) return;
-  const p = PRI[q.uu];
-
-  $("#prStage").style.setProperty("--c", p.c);
-  $("#prStage").style.setProperty("--c-bg", p.cbg);
-  $("#prCount").textContent = `Câu ${PR.i + 1} / ${PR.queue.length}`;
-  $("#prMeta").innerHTML =
-    `<span class="pri" style="--c:${p.c};--c-bg:${p.cbg}">${p.nhan}</span>
-     <span class="topic">${esc(q.chuDe)}</span> <span class="qid">#${esc(q.id)}</span>`;
-  $("#prQ").innerHTML = fmt(q.ch);
-
-  $("#prBody").innerHTML = `
-    <div class="blk"><div class="blk-head">Từ khoá phải nói</div>
-      <div class="chips">${q.tk.map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div></div>
-    <div class="blk"><div class="blk-head">Dàn ý trả lời</div>
-      <ol class="steps">${q.dy.map(d => `<li>${fmt(d)}</li>`).join("")}</ol></div>
-    ${q.bay ? `<div class="blk"><div class="trap"><span class="trap-ico">⚠</span>
-      <div><b>Bẫy cần tránh — </b>${fmt(q.bay)}</div></div></div>` : ""}
-    <div class="pr-actions" style="margin-top:20px">
-      ${STATUS.map(s => `<button class="btn btn-ghost" data-prstatus="${s.key}"
-        style="${trangThai(q.id) === s.key ? "border-color:var(--accent);color:var(--accent)" : ""}">${s.ky} ${s.ten}</button>`).join("")}
-    </div>`;
-  $("#prBody").hidden = true;
-  $("#prReveal").textContent = "Hiện gợi ý";
-  prTimerReset();
-}
-
-function prTimerReset() {
-  clearInterval(PR.tick);
-  PR.t0 = Date.now();
-  const el = $("#prTimer");
-  const ve = () => {
-    const s = Math.floor((Date.now() - PR.t0) / 1000);
-    el.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-    el.className = "pr-timer" + (s >= 120 ? " over" : s >= 90 ? " warn" : "");
-  };
-  ve();
-  PR.tick = setInterval(ve, 1000);
-}
-
-function prNext(buoc = 1) {
-  PR.i = (PR.i + buoc + PR.queue.length) % PR.queue.length;
-  prShow();
-}
-
-/* ============================================================
    GẮN SỰ KIỆN
    ============================================================ */
 function bind() {
@@ -345,34 +277,6 @@ function bind() {
     }
     const head = e.target.closest(".card-head");
     if (head) head.parentElement.classList.toggle("is-open");
-  });
-
-  /* Luyện tập */
-  $("#prReveal").addEventListener("click", () => {
-    const b = $("#prBody");
-    b.hidden = !b.hidden;
-    $("#prReveal").textContent = b.hidden ? "Hiện gợi ý" : "Ẩn gợi ý";
-  });
-  $("#prNext").addEventListener("click", () => prNext(1));
-  $("#prPrev").addEventListener("click", () => prNext(-1));
-  $("#prShuffle").addEventListener("click", prBuild);
-  $("#prUuTien").addEventListener("change", e => { PR.uuTien = e.target.checked; prBuild(); });
-  $("#prTron").addEventListener("change", e => { PR.tronDeu = e.target.checked; prBuild(); });
-  $("#prBody").addEventListener("click", e => {
-    const b = e.target.closest("[data-prstatus]");
-    if (!b) return;
-    S.status[PR.queue[PR.i].id] = b.dataset.prstatus; save();
-    $$("[data-prstatus]", $("#prBody")).forEach(x =>
-      x.style.cssText = x === b ? "border-color:var(--accent);color:var(--accent)" : "");
-  });
-
-  /* Phím tắt trong chế độ luyện */
-  document.addEventListener("keydown", e => {
-    if (S.view !== "practice") return;
-    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-    if (e.code === "Space")      { e.preventDefault(); $("#prReveal").click(); }
-    if (e.key === "ArrowRight")  { e.preventDefault(); prNext(1); }
-    if (e.key === "ArrowLeft")   { e.preventDefault(); prNext(-1); }
   });
 }
 
