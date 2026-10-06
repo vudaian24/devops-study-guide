@@ -1,6 +1,7 @@
 /* ============================================================
-   app.js — render, lọc, lưu tiến độ, chế độ luyện.
-   Không phụ thuộc thư viện ngoài. Mở trực tiếp index.html là chạy.
+   app.js — trang Ngân hàng câu hỏi: render, lọc, tìm kiếm, lưu tiến độ.
+   Tiện ích, trạng thái và thanh tab nằm ở common.js.
+   Không phụ thuộc thư viện ngoài. Mở trực tiếp bank.html là chạy.
    ============================================================ */
 
 /* ---------- Hằng số ---------- */
@@ -23,107 +24,20 @@ const STATUS = [
   { key: "known",  ky: "✓", ten: "Đã thuộc" }
 ];
 
-/* Chỉ tính tiến độ trên câu mình phải học, không tính câu hỏi ngược */
-const HOC = QUESTIONS.filter(q => q.nhom !== "hoinguoc");
-
-/* ---------- Trạng thái lưu lại ---------- */
-const KEY = "warroom.v1";
-let S = { theme: "dark", status: {}, roadmap: {}, view: "dashboard" };
-try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-
 /* Bộ lọc — không lưu, mỗi lần mở là về mặc định */
 let F = { chuDe: "all", uu: "all", q: "", chuaThuoc: false, moHet: false };
 
-/* ---------- Tiện ích ---------- */
-const $  = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-/* Bọc `...` thành <code> */
-const fmt = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
-
-const trangThai = id => S.status[id] || "new";
-
-/* ---------- Theme ---------- */
-function applyTheme() {
-  document.documentElement.setAttribute("data-theme", S.theme);
-  $("#themeToggle").textContent = S.theme === "dark" ? "☀" : "☾";
-  $("#themeToggle").title = S.theme === "dark" ? "Chuyển sang nền sáng" : "Chuyển sang nền tối";
-}
-
-/* ---------- Chuyển màn ---------- */
-const MAN_HINH = ["dashboard", "bank"];
-
-function showView(v) {
-  if (!MAN_HINH.includes(v)) v = "dashboard";   // chặn view cũ còn sót trong localStorage
-  S.view = v; save();
-  $$(".view").forEach(el => el.classList.toggle("is-active", el.id === "view-" + v));
-  $$(".tab").forEach(b => b.classList.toggle("is-active", b.dataset.view === v));
-  if (v === "dashboard") renderDashboard();
-  window.scrollTo({ top: 0 });
+/* Trang kiến thức trỏ sang đây bằng bank.html#chude=<tên chủ đề> */
+function chuDeTuHash() {
+  const m = location.hash.match(/^#chude=(.+)$/);
+  if (!m) return;
+  let cd;
+  try { cd = decodeURIComponent(m[1]); } catch (e) { return; }
+  if (QUESTIONS.some(q => q.chuDe === cd)) F.chuDe = cd;
 }
 
 /* ============================================================
-   MÀN 1 — TỔNG QUAN
-   ============================================================ */
-function renderDashboard() {
-  /* Độ khớp CV ↔ JD */
-  $("#matchList").innerHTML = MATCH.map(m => {
-    const p = PRI[m.loai];
-    return `<div class="match-row" style="--c:${p.c}">
-      <div class="match-name">${esc(m.ten)}</div>
-      <div class="bar"><i style="width:${m.muc}%"></i></div>
-      <div class="match-tag">${esc(m.nhan)}</div>
-    </div>`;
-  }).join("");
-
-  /* Ba rủi ro */
-  $("#riskList").innerHTML = RISKS.map(r => `
-    <div class="risk-card">
-      <div class="risk-no">${esc(r.so)}</div>
-      <div>
-        <div class="risk-ten">${esc(r.ten)}</div>
-        <p class="risk-noi">${fmt(r.noi)}</p>
-      </div>
-    </div>`).join("");
-
-  /* Tiến độ */
-  const dem = { new: 0, review: 0, known: 0 };
-  HOC.forEach(q => dem[trangThai(q.id)]++);
-  const pct = Math.round(dem.known / HOC.length * 100);
-  const gapChuaThuoc = HOC.filter(q => q.uu === "gap" && trangThai(q.id) !== "known").length;
-
-  $("#progressBox").innerHTML = `
-    <div class="stat-big">${dem.known} <span style="font-size:19px;color:var(--muted);font-weight:500">/ ${HOC.length}</span></div>
-    <div class="stat-sub">câu đã thuộc${gapChuaThuoc ? ` · còn <b style="color:var(--gap)">${gapChuaThuoc} câu 🔴 chưa xong</b>` : " · đã xong hết câu 🔴"}</div>
-    <div class="progress-track"><i style="width:${pct}%"></i></div>
-    <div class="legend">
-      <div><span class="dot" style="--c:var(--strong)"></span> Đã thuộc <b>${dem.known}</b></div>
-      <div><span class="dot" style="--c:var(--high)"></span> Cần ôn lại <b>${dem.review}</b></div>
-      <div><span class="dot" style="--c:var(--muted)"></span> Chưa học <b>${dem.new}</b></div>
-    </div>`;
-
-  /* Lộ trình */
-  $("#roadmapList").innerHTML = ROADMAP.map((r, i) => {
-    const done = !!S.roadmap[i];
-    return `<label class="rm-item ${done ? "done" : ""}">
-      <input type="checkbox" data-rm="${i}" ${done ? "checked" : ""}>
-      <div style="flex:1">
-        <div class="rm-ten" style="color:${done ? "" : PRI[r.uu].c}">${esc(r.ten)}</div>
-        <div class="rm-ghi">${esc(r.ghi)}</div>
-      </div>
-      <span class="rm-gio">${esc(r.gio)}</span>
-    </label>`;
-  }).join("");
-
-  $("#ruleList").innerHTML = RULES.map(r => `<li>${fmt(r)}</li>`).join("");
-  $("#frameworkList").innerHTML = FRAMEWORK.map(f => `<li>${fmt(f)}</li>`).join("");
-}
-
-/* ============================================================
-   MÀN 2 — NGÂN HÀNG CÂU HỎI
+   NGÂN HÀNG CÂU HỎI
    ============================================================ */
 function locCauHoi() {
   const q = F.q.trim().toLowerCase();
@@ -228,19 +142,6 @@ function renderCards() {
    GẮN SỰ KIỆN
    ============================================================ */
 function bind() {
-  /* Tab + theme */
-  $$(".tab").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
-  $("#themeToggle").addEventListener("click", () => {
-    S.theme = S.theme === "dark" ? "light" : "dark"; save(); applyTheme();
-  });
-
-  /* Lộ trình */
-  $("#roadmapList").addEventListener("change", e => {
-    const i = e.target.dataset.rm;
-    if (i === undefined) return;
-    S.roadmap[i] = e.target.checked; save(); renderDashboard();
-  });
-
   /* Sidebar */
   $("#sideNav").addEventListener("click", e => {
     const b = e.target.closest("[data-chude]");
@@ -278,10 +179,12 @@ function bind() {
     const head = e.target.closest(".card-head");
     if (head) head.parentElement.classList.toggle("is-open");
   });
+
+  /* Bấm "Back/Forward" khi đang ở trang này với các liên kết #chude=… khác nhau */
+  window.addEventListener("hashchange", () => { chuDeTuHash(); renderCards(); });
 }
 
 /* ---------- Khởi động ---------- */
-applyTheme();
+chuDeTuHash();
 bind();
 renderCards();
-showView(S.view || "dashboard");

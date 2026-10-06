@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ngân hàng câu hỏi · Interview Devops</title>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="description" content="Ngân hàng 91 câu hỏi phỏng vấn DevOps Engineer: lọc theo chủ đề và mức ưu tiên, đánh dấu đã thuộc.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<script src="js/theme-init.js"></script>
+</head>
+<body data-page="bank">
+
+<!-- ============ THANH TRÊN — do js/common.js dựng từ danh sách TABS ============ -->
+<header class="topbar" id="topbar"></header>
+
+<main>
+  <div class="wrap">
+    <div class="bank">
+
+      <aside class="sidebar">
+        <nav class="side-nav" id="sideNav"></nav>
+      </aside>
+
+      <div>
+        <div class="toolbar">
+          <label class="search">
+            <span style="color:var(--muted)">⌕</span>
+            <input type="search" id="searchInput" placeholder="Tìm trong câu hỏi, từ khoá, dàn ý…" autocomplete="off">
+          </label>
+          <div class="seg" id="segUu">
+            <button data-uu="all" class="is-active">Tất cả</button>
+            <button data-uu="gap">Gap</button>
+            <button data-uu="high">Hay hỏi</button>
+            <button data-uu="strong">Thế mạnh</button>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="chkChuaThuoc"> Chỉ câu chưa thuộc
+          </label>
+          <button class="btn btn-ghost" id="btnMoHet" style="padding:8px 14px;font-size:13px">Mở hết</button>
+        </div>
+
+        <div class="result-line" id="resultLine"></div>
+        <div id="cardList"></div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="js/common.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
