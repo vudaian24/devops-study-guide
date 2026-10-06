@@ -1,6 +1,6 @@
-# Interview War Room
+# DevOps Study Guide
 
-Bộ ôn phỏng vấn vị trí **DevOps Engineer** (JD: Linux/Windows Server, GitLab CI/CD, Docker,
+Bộ ôn tập kiến thức cho vị trí **DevOps Engineer** (JD: Linux/Windows Server, GitLab CI/CD, Docker,
 Monitoring, Backup/DR, IaC — 25–35 triệu, Long Biên).
 
 Nội dung kiến thức bám **đúng CV** (`cv-devops.pdf`): mỗi dòng trong phần *Skills* là một trang riêng,
@@ -115,7 +115,7 @@ Bọc lệnh bằng dấu backtick — ví dụ `` `kubectl logs --previous` `` 
 ## Cấu trúc
 
 ```
-interview-war-room/
+devops-study-guide/
 ├── index.html … cases.html, bank.html   mỗi tab một trang
 ├── css/style.css                         giao diện, dark/light, responsive, bản in
 └── js/

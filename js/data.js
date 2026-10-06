@@ -1,5 +1,5 @@
 /* ============================================================
-   data.js — toàn bộ nội dung ôn phỏng vấn.
+   data.js — toàn bộ nội dung ôn tập (ngân hàng câu hỏi).
    Muốn thêm/sửa câu hỏi: chỉ cần sửa file này, không đụng HTML.
 
    Mỗi câu hỏi:
