@@ -16,6 +16,7 @@ const TABS = [
   { id: "monitoring", file: "monitoring.html", ten: "Monitoring" },
   { id: "database",   file: "database.html",   ten: "Database" },
   { id: "cases",      file: "cases.html",      ten: "Case thực tế" },
+  { id: "incident",   file: "incident.html",   ten: "Debug sự cố" },
   { id: "bank",       file: "bank.html",       ten: "Ngân hàng câu hỏi", tach: true }   // tach: vạch ngăn trước tab này
 ];
 

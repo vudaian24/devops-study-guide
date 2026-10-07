@@ -17,7 +17,7 @@ open index.html          # macOS (Linux: xdg-open)
 Không cần server, không cần build, chạy được offline. Cũng deploy thẳng lên GitHub Pages được
 (có `.nojekyll`, mọi trang đều `noindex`).
 
-## Chín trang
+## Mười trang
 
 Mỗi tab là **một file HTML riêng**; thanh tab ở đầu trang dùng chung.
 
@@ -31,6 +31,7 @@ Mỗi tab là **một file HTML riêng**; thanh tab ở đầu trang dùng chung
 | Monitoring | `monitoring.html` | CloudWatch Logs, Grafana, cảnh báo |
 | Database | `database.html` | PostgreSQL, MySQL, MongoDB, Redis, migration, backup/HA |
 | **Case thực tế** | `cases.html` | 16 tình huống DevOps thật: multi-tenant, migration schema, cutover hệ thống, truy cập DB trong private network, rollout/rollback ECS, phát hành SPA, OOMKilled, SSRF, lộ/xoay secret, restore một tenant, chi phí AWS, và **zero-downtime cho FE + BE** trên ECS Fargate / EKS / on-prem (cơ chế chung, từng nền tảng, kiểm chứng bằng tải) |
+| **Debug sự cố** | `incident.html` | Khung xử lý sự cố production + 10 kịch bản: 5xx sau deploy, hệ thống chậm, database quá tải, pod Kubernetes không lên, ECS task bị dừng, đầy đĩa, mạng / DNS, chứng chỉ hết hạn, hàng đợi SQS ùn, rò rỉ tài nguyên; kèm cách viết postmortem |
 | Ngân hàng câu hỏi | `bank.html` | 91 câu hỏi có gợi ý ẩn, lọc theo chủ đề / ưu tiên, đánh dấu đã thuộc |
 
 Cuối mỗi trang kiến thức có liên kết **“Luyện lại bằng câu hỏi”** nhảy thẳng tới đúng chủ đề trong ngân hàng
@@ -48,6 +49,7 @@ Cuối mỗi trang kiến thức có liên kết **“Luyện lại bằng câu 
    Vòng ôn sau bật **“Chỉ câu chưa thuộc”** để không đọc lại thứ đã nắm.
 4. Ưu tiên theo màu: 🔴 **gap** học trước, 🟠 **hay hỏi** phải trôi chảy, 🟢 **thế mạnh** chủ động kéo về.
 5. Với trang **Case thực tế**: tập kể từng case trong 2–3 phút theo khung 8 bước ở mục đầu trang.
+6. Với trang **Debug sự cố**: tập nói thành tiếng theo thứ tự *giảm thiệt hại → giữ bằng chứng → giả thuyết → kiểm chứng → phòng ngừa*, và nói ra điều bạn đã loại trừ ở mỗi bước.
 
 Tiến độ và nền sáng/tối lưu trong `localStorage` (khoá `warroom.v1`) — đóng mở lại vẫn còn,
 nhưng **không đồng bộ giữa các máy** và sẽ mất nếu bạn xoá dữ liệu duyệt web.
@@ -77,7 +79,7 @@ const TRANG = {
 ```
 
 Trong chuỗi: `` `code` `` → ô mã, `**đậm**`, `*nghiêng*`. Có thể đổi nhãn bằng `nhan`, `nhanSkill`, `nhanCV`,
-`mucLucCV` (trang Case thực tế dùng các nhãn này).
+`mucLucCV` (trang Case thực tế và Debug sự cố dùng các nhãn này).
 
 ### Thêm một trang mới
 
@@ -116,7 +118,7 @@ Bọc lệnh bằng dấu backtick — ví dụ `` `kubectl logs --previous` `` 
 
 ```
 devops-study-guide/
-├── index.html … cases.html, bank.html   mỗi tab một trang
+├── index.html … incident.html, bank.html   mỗi tab một trang
 ├── css/style.css                         giao diện, dark/light, responsive, bản in
 └── js/
     ├── theme-init.js   áp nền sáng/tối trước khi vẽ (tránh nháy)
