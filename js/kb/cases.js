@@ -13,8 +13,8 @@ const TRANG = {
   nhanSkill: "Công nghệ xuất hiện trong các case",
   nhanCV: "Các dòng CV mà những case này bám vào",
   mucLucCV: "CV nào đứng sau các case",
-  tomTat: "Những tình huống thật mà một DevOps phải xử lý: **triển khai multi-tenant, migration, truy cập database trong private network, rollout / rollback, SSRF, secret, khôi phục dữ liệu, chi phí**. Mỗi case đi theo cùng khung — bối cảnh, lựa chọn và đánh đổi, các bước làm, cách kiểm chứng, rủi ro — để bạn kể được trong 2–3 phút.",
-  cvSkill: ["Terraform", "ECS Fargate", "Aurora", "SSM", "Liquibase", "Kubernetes", "Helm", "CloudFront", "Secrets Manager", "CloudWatch"],
+  tomTat: "Những tình huống thật mà một DevOps phải xử lý: **triển khai multi-tenant, migration, truy cập database trong private network, zero-downtime cho FE và BE trên ECS Fargate / EKS / on-prem, rollout / rollback, SSRF, secret, khôi phục dữ liệu, chi phí**. Mỗi case đi theo cùng khung — bối cảnh, lựa chọn và đánh đổi, các bước làm, cách kiểm chứng, rủi ro — để bạn kể được trong 2–3 phút.",
+  cvSkill: ["Terraform", "ECS Fargate", "EKS", "Aurora", "SSM", "Liquibase", "Kubernetes", "Helm", "ALB", "CloudFront", "Nginx", "Secrets Manager", "CloudWatch"],
 
   cv: [
     { nguon: "ERC Booking · Multi-tenant",
@@ -29,6 +29,8 @@ const TRANG = {
       noi: "Kept memory-heavy, bursty AI workloads stable under live traffic: diagnosed pod-level incidents with kubectl — OOMKilled containers, CrashLoopBackOff, failing probes — and tuned resource requests, limits, and probe thresholds." },
     { nguon: "Kotae · Bảo mật",
       noi: "Hardened the RAG ingestion path against server-side request forgery, adding private-IP and redirect reachability checks around the crawler, with unit tests covering the blocked ranges." },
+    { nguon: "Professional summary",
+      noi: "…a multi-tenant AWS platform — 151 Terraform resources across 22 reusable modules — with zero-downtime container rollouts and gated database migrations…" },
     { nguon: "Self-managed deployment",
       noi: "Public production service on a self-managed Linux host rather than a managed platform, delivery path owned end to end." }
   ],
@@ -45,7 +47,7 @@ const TRANG = {
         "**Nói về đánh đổi** thay vì ‘cách tốt nhất’: mỗi quyết định kiến trúc đều có cái giá. Người phỏng vấn đánh giá khả năng cân nhắc, không phải khả năng thuộc đáp án.",
         "**Thừa nhận phần chưa làm hoặc còn thủ công** và nói bạn sẽ làm gì tiếp — đáng tin hơn nhiều so với nói quá.",
         "**Kết bằng phòng ngừa**: sau khi xử lý xong, hệ thống hay quy trình đã tốt lên thế nào. Dừng ở ‘em restart / rollback là xong’ là câu trả lời của người vận hành thụ động.",
-        "**Các case dưới đây** gồm: kiến trúc (1, 3) · dữ liệu và truy cập (2, 4, 10) · triển khai và phát hành (5, 6) · sự cố và bảo mật (7, 8, 9) · chi phí (11)."
+        "**Các case dưới đây** gồm: kiến trúc (1, 3) · dữ liệu và truy cập (2, 4, 10) · triển khai và phát hành (5, 6) · **zero-downtime FE / BE trên ECS, EKS, on-prem (12–16)** · sự cố và bảo mật (7, 8, 9) · chi phí (11)."
       ]
     },
 
@@ -252,7 +254,8 @@ const TRANG = {
         "**Điều kiện để rollback an toàn**: schema DB tương thích ngược (xem Case 2), không có thay đổi dữ liệu không đảo ngược, và biết revision / tag đang chạy trước khi deploy (ghi lại).",
         "**Selective build (monorepo)**: chỉ build / deploy service có thay đổi (lọc `paths` ở cấp job) mà vẫn giữ required check — xem trang CI/CD.",
         "**Quan sát trong lúc rollout**: tỷ lệ 5xx và latency của target group, số task healthy / unhealthy, events của service; đặt cảnh báo khi rollout kẹt.",
-        "**Cẩn trọng hơn nữa**: canary hoặc blue/green (CodeDeploy hoặc tính năng blue/green tích hợp của ECS). Đánh đổi: phức tạp hơn, tốn gấp đôi tài nguyên trong lúc chuyển."
+        "**Cẩn trọng hơn nữa**: canary hoặc blue/green (CodeDeploy hoặc tính năng blue/green tích hợp của ECS). Đánh đổi: phức tạp hơn, tốn gấp đôi tài nguyên trong lúc chuyển.",
+        "**Đi sâu hơn**: cơ chế drain, `stopTimeout`, `deregistration_delay` và so sánh với EKS / on-prem nằm ở Case 12–15."
       ],
       lenh: [
         ["aws ecs describe-services --cluster <c> --services <s> --query 'services[0].deployments'", "Deployment hiện tại: PRIMARY / ACTIVE, số task running / desired"],
@@ -275,7 +278,7 @@ const TRANG = {
         "**SPA routing**: custom error response 403 / 404 → `/index.html` (mã 200).",
         "**Kiểm chứng sau deploy**: `curl -I` xem `x-cache`, `cache-control` của `index.html`; mở bản mới trong cửa sổ ẩn danh; console không có lỗi 404 asset.",
         "**Rollback**: upload lại `index.html` của bản trước (asset cũ vẫn còn) + invalidate `/index.html` — vài chục giây, không cần build lại.",
-        "**Service worker / PWA** (nếu có) có thể giữ bản cũ — cần chiến lược cập nhật, nếu không người dùng kẹt ở bản cũ dù đã deploy.",
+        "**Service worker / PWA** (nếu có) có thể giữ bản cũ — cần chiến lược cập nhật, nếu không người dùng kẹt ở bản cũ dù đã deploy. FE trong container (ECS / EKS) và on-prem được mở rộng ở Case 16.",
         "**Biến cấu hình lúc build** (API URL…) bị ‘đóng cứng’ vào bundle → mỗi môi trường một bản build, hoặc đọc cấu hình runtime từ `config.json` (không cache) để build một lần dùng cho mọi môi trường.",
         "**Bảo mật**: bucket không public (OAC), security headers, WAF; không đưa secret vào bundle — mọi thứ trong bundle đều là công khai."
       ],
@@ -448,6 +451,480 @@ const TRANG = {
       ],
       bay: "Cắt giảm bằng cách hạ độ tin cậy (tắt Multi-AZ, rút ngắn backup) rồi gặp sự cố; hoặc ‘tối ưu’ khi chưa biết khoản nào đang tốn — phải đo trước (Cost Explorer) rồi mới hành động.",
       cv: "Bạn quản hạ tầng multi-tenant nên chi phí là câu hỏi tự nhiên (NAT Gateway, Aurora, CloudWatch Logs nhân theo tenant). Chuẩn bị hai ví dụ thật: khoản tốn nhất bạn từng thấy và điều bạn đã làm để giảm."
+    },
+
+    /* ---------------------------------------------------------- */
+    {
+      id: "zd-chung", ten: "Case 12 — Zero-downtime: cơ chế chung và các điểm dễ rớt request",
+      y: [
+        "**Câu hỏi hay gặp**: ‘Bạn deploy không downtime như thế nào — frontend và backend khác nhau ra sao, trên ECS Fargate, EKS và on-prem?’ Trả lời tốt = một **mô hình chung** rồi **chi tiết từng nền tảng** (Case 13–16), không phải liệt kê công cụ.",
+        "**Định nghĩa**: zero-downtime = người dùng **không thấy lỗi và không mất request đang chạy** khi deploy, scale-in, thay node hay rollback. Thực tế nghĩa là ‘không có cửa sổ lỗi đo được’ — nên luôn **đo**, đừng chỉ tuyên bố.",
+        "**Sáu điều kiện phải đúng cùng lúc**: (1) **luôn đủ capacity** — chạy bản mới *trước*, tắt bản cũ *sau*; (2) **chỉ nhận traffic khi sẵn sàng** — health check phản ánh việc xử lý được request thật; (3) **ngừng nhận traffic trước khi tắt** — gỡ khỏi LB và *đợi* thay đổi lan ra; (4) **tắt êm** — bắt `SIGTERM`, xử lý nốt request dở, đóng pool rồi mới thoát, trong thời hạn trước `SIGKILL`; (5) **hai phiên bản chạy chồng nhau phải tương thích** (schema DB, API, message, cache key — Case 2); (6) **có đường lui nhanh** mà không cần build lại.",
+        "**Bản chất của lỗi**: ba việc xảy ra *song song*, không có thứ tự bảo đảm — LB bỏ target, hệ thống gửi `SIGTERM`, request mới vẫn đang trên đường. Mọi cơ chế (drain, `deregistration_delay`, `preStop` sleep) chỉ để *tạo ra thứ tự* cho ba việc này.",
+        "**FE khác BE**: BE là *tiến trình giữ kết nối* → vấn đề là drain và tắt êm. FE tĩnh là *file* → vấn đề là thứ tự ghi file, cache và giữ asset cũ (Case 16). FE chạy trong container (SSR) mắc cả hai.",
+        "**Ba nền tảng, gói gọn**: ECS gỡ task khỏi LB và đợi drain *rồi mới* SIGTERM; EKS gỡ endpoint và SIGTERM **song song** nên cần `preStop`; on-prem bạn tự dựng LB, drain và health check — đổi lại kiểm soát toàn bộ.",
+        "**Không chỉ deploy**: scale-in (autoscaling), thay node (drain, Karpenter, spot interruption), nâng cấp cluster, đổi cấu hình — đều là lần ‘thay instance’ và cần cùng cơ chế tắt êm. Kubernetes bảo vệ các trường hợp này bằng PodDisruptionBudget.",
+        "**Kiểm chứng bằng đo**: chạy tải liên tục (k6 / hey / vòng lặp curl) *trong lúc deploy* và đếm mã không phải 2xx; xem `HTTPCode_ELB_5XX_Count`, `HTTPCode_Target_5XX_Count`, `UnHealthyHostCount`, log của LB / Nginx. Đưa thành smoke test sau rollout.",
+        "**Đọc mã lỗi khi deploy**: `502` = tiến trình bị tắt lúc đang xử lý, hoặc keep-alive của app ngắn hơn idle timeout của LB (LB tái dùng kết nối vừa bị app đóng) → tắt êm và đặt keep-alive của app *lớn hơn* idle timeout của LB (ALB 60s → app 65s). `503` = không còn target khỏe (rớt capacity, tất cả cùng unhealthy) → giữ capacity, health check đúng, `replicas ≥ 2`. `504` = request vượt idle timeout hoặc app bị tắt giữa lúc xử lý lâu → drain đủ dài, việc dài chuyển sang queue / job. Chậm hoặc timeout ngay sau rollout = bản mới nhận traffic khi chưa ‘ấm’ → `startupProbe`, `slow_start`, warm-up."
+      ],
+      bang: {
+        ten: "Ba nền tảng — cùng mục tiêu, khác cơ chế",
+        cot: ["", "ECS Fargate", "EKS (Kubernetes)", "On-prem (VM + Nginx / HAProxy)"],
+        hang: [
+          ["Giữ đủ capacity", "`minimumHealthyPercent=100`, `maximumPercent=200`", "`maxUnavailable: 0`, `maxSurge: 1` hoặc 25%", "≥ 2 node; cuốn chiếu từng node (`serial: 1`)"],
+          ["Cổng ‘sẵn sàng’", "Health check của ALB, `healthCheckGracePeriodSeconds`", "`readinessProbe` + `startupProbe`, pod readiness gate với ALB", "Health check của Nginx / HAProxy (`option httpchk`, `rise`)"],
+          ["Ngừng nhận traffic trước khi tắt", "ECS gỡ khỏi target group, đợi drain (`deregistration_delay`) *rồi mới* SIGTERM", "Gỡ khỏi EndpointSlice **song song** với SIGTERM → cần `preStop: sleep`", "Tự đặt node ở trạng thái drain (HAProxy `state drain`, hoặc `down` trong upstream + reload)"],
+          ["Thời hạn tắt êm", "`stopTimeout` (tối đa 120s trên Fargate)", "`terminationGracePeriodSeconds`", "`TimeoutStopSec` (systemd), `docker stop -t`, `stop_grace_period`"],
+          ["Tự rollback khi lỗi", "Deployment circuit breaker + CloudWatch alarm", "`helm upgrade --atomic`, `progressDeadlineSeconds`, Argo Rollouts analysis", "Health check sau cutover + script rollback; Ansible dừng khi node đầu lỗi"],
+          ["Canary / blue-green", "CodeDeploy hoặc blue/green tích hợp của ECS (hai target group)", "Argo Rollouts, Flagger, ingress canary / service mesh", "Hai upstream với `weight` (Nginx / HAProxy), đổi bằng reload"],
+          ["Điểm yếu hay gặp", "Task lên chậm (kéo image); `deregistration_delay` mặc định 300s làm rollout lâu", "SIGTERM tới trước khi LB kịp bỏ pod → 502; quên PDB khi drain node", "Mọi thứ thủ công nên dễ sai; LB là điểm lỗi đơn nếu không HA"]
+        ]
+      },
+      ma: {
+        ten: "Kiểm chứng: bắn request liên tục trong lúc deploy",
+        noi: [
+          "# Terminal 1 — bắn request liên tục, chỉ in ra khi KHÔNG phải 200",
+          "while true; do",
+          "  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://app.example.com/health)",
+          "  [ \"$code\" != \"200\" ] && echo \"$(date +%T) $code\"",
+          "  sleep 0.1",
+          "done",
+          "",
+          "# Terminal 2 — trong lúc đó chạy deploy (ecs update-service / helm upgrade / playbook cuốn chiếu)",
+          "# Kết quả mong đợi: Terminal 1 không in dòng nào. Có dòng 502 / 503 / 504 → xem ý ‘Đọc mã lỗi khi deploy’ ở trên."
+        ]
+      },
+      lenh: [
+        ["k6 run --vus 20 --duration 3m script.js", "Tải ổn định trong lúc deploy; chỉ số `http_req_failed` là tỷ lệ lỗi"],
+        ["aws cloudwatch get-metric-statistics --namespace AWS/ApplicationELB --metric-name HTTPCode_ELB_5XX_Count --dimensions Name=LoadBalancer,Value=<app/lb/id> --start-time <t1> --end-time <t2> --period 60 --statistics Sum", "Số 5xx do ALB sinh ra trong cửa sổ deploy"],
+        ["aws elbv2 describe-target-health --target-group-arn <arn>", "Target nào đang `healthy`, `draining`, `unhealthy` và vì sao"],
+        ["kubectl get endpointslices -l kubernetes.io/service-name=<svc> -w", "Xem pod được thêm / bớt khỏi endpoint theo thời gian thực khi rollout"]
+      ],
+      bay: [
+        "Tuyên bố ‘zero-downtime’ chỉ vì đã bật rolling update: không đo, không tắt êm, không xử lý keep-alive — vẫn rớt request lẻ mà không ai thấy.",
+        "Quên rằng hai phiên bản chạy chồng nhau: đổi tên cột hay đổi định dạng message trong cùng lần phát hành khiến bản cũ lỗi đúng lúc rollout."
+      ],
+      cv: "CV của bạn có hai cụm người phỏng vấn sẽ đào: ‘zero-downtime container rollouts’ (ECS) và ‘zero-downtime SPA deploys’. Mở bằng sáu điều kiện trên rồi chỉ ra bạn đã làm điều kiện nào ở đâu (circuit breaker và `wait stable`; asset trước, index sau…). Với EKS và on-prem, nói rõ mức bạn trực tiếp làm (Kotae chạy Helm / Kubernetes; dịch vụ tự quản dùng `compose up --wait`) và phần bạn hiểu cơ chế."
+    },
+
+    /* ---------------------------------------------------------- */
+    {
+      id: "zd-ecs", ten: "Case 13 — Backend zero-downtime trên ECS Fargate",
+      y: [
+        "**Hai lớp phải cùng đúng**: (1) *deployment* của ECS service quyết định thay task thế nào; (2) ALB và ứng dụng quyết định request có rớt hay không. Case 5 là pipeline trong CV; case này đi vào **cơ chế bên trong**.",
+        "**Rolling update**: `minimumHealthyPercent=100` (không bao giờ ít hơn desired) và `maximumPercent=200` (cho chạy gấp đôi để bản mới lên trước). Lưu ý `maximumPercent=200` **nhân đôi số kết nối DB** trong lúc rollout — kiểm tra `max_connections` và kích thước pool.",
+        "**Vòng đời một task bị thay**: ECS đưa task vào `DEACTIVATING` — gỡ khỏi target group và **đợi drain** (`deregistration_delay`) — *sau đó* mới `STOPPING`: gửi `SIGTERM`, đợi `stopTimeout`, rồi `SIGKILL`. Khác EKS: không cần `preStop` sleep để chờ LB, vì ECS đã tự làm bước đó trước.",
+        "**Vậy app còn phải tắt êm để làm gì?** Đóng pool DB, flush log / metric, hoàn tất việc nền — và là cơ chế **duy nhất** với *worker* và mọi kết nối không đi qua ALB.",
+        "**Thời gian cần tính**: một task cũ biến mất sau ≈ `deregistration_delay` + tối đa `stopTimeout`. `deregistration_delay` mặc định 300s làm rollout rất chậm nếu còn kết nối mở (keep-alive, WebSocket) → đặt khoảng 30–60s, **≥ request dài nhất**. `stopTimeout` mặc định 30s, tối đa 120s trên Fargate.",
+        "**Task mới lên chậm**: Fargate phải kéo image (image nhỏ, ECR cùng region, VPC endpoint cho ECR / S3) rồi qua health check. Thời gian vào service ≈ khởi động + `healthy threshold` × `interval`. Đặt `healthCheckGracePeriodSeconds` **lớn hơn thời gian khởi động** để ECS không giết task đang khởi động; `slow_start` của target group tăng tải dần cho task mới.",
+        "**Health check của ALB nên nông**: ECS *thay task* khi target fail health check (khác Kubernetes chỉ rút pod khỏi endpoint). Nếu `/health` gọi sâu vào DB thì DB chớp một nhịp là mọi task cùng unhealthy và bị thay hàng loạt — biến sự cố nhỏ thành sập toàn bộ. Kiểm tra dependency để ở smoke test sau deploy.",
+        "**Tự bảo vệ khi bản mới lỗi**: *deployment circuit breaker* (`enable`, `rollback`) dừng rollout và quay về revision ổn định khi task mới không lên được. Thêm *deployment alarms* (CloudWatch alarm cho 5xx / latency) để rollback cả khi task ‘chạy’ nhưng sai.",
+        "**Worker (SQS consumer)**: ngừng poll khi nhận `SIGTERM`, xử lý nốt message đang cầm, `stopTimeout` ≥ thời gian xử lý một message; `VisibilityTimeout` > thời gian xử lý; xử lý **idempotent** vì message có thể bị giao lại.",
+        "**Canary / blue-green**: CodeDeploy (hai target group + test listener, `Canary10Percent5Minutes`, `Linear10PercentEvery1Minutes`, hook kiểm tra, rollback theo alarm) hoặc blue/green tích hợp sẵn của ECS (xem tài liệu bản hiện hành). Đánh đổi: gấp đôi task trong lúc chuyển, nhiều cấu hình hơn, có thời gian bake.",
+        "**Rollback**: `update-service --task-definition <family>:<revision cũ>` rồi `wait services-stable`; revision cũ vẫn còn nên không cần build lại. Điều kiện: schema DB tương thích ngược (Case 2)."
+      ],
+      ma: [
+        {
+          ten: "Terraform: service và target group cho rollout êm",
+          noi: [
+            'resource "aws_ecs_service" "api" {',
+            '  name            = "api"',
+            "  cluster         = aws_ecs_cluster.main.id",
+            "  task_definition = aws_ecs_task_definition.api.arn",
+            "  desired_count   = 2",
+            "",
+            "  deployment_minimum_healthy_percent = 100   # không bao giờ ít hơn desired",
+            "  deployment_maximum_percent         = 200   # cho bản mới lên TRƯỚC (nhớ: nhân đôi kết nối DB)",
+            "  health_check_grace_period_seconds  = 60    # lớn hơn thời gian khởi động của app",
+            "",
+            "  deployment_circuit_breaker {",
+            "    enable   = true",
+            "    rollback = true                          # task mới không lên được → tự về revision cũ",
+            "  }",
+            "",
+            "  load_balancer {",
+            "    target_group_arn = aws_lb_target_group.api.arn",
+            '    container_name   = "api"',
+            "    container_port   = 8080",
+            "  }",
+            "}",
+            "",
+            'resource "aws_lb_target_group" "api" {',
+            "  # ...",
+            "  deregistration_delay = 30                  # >= request dài nhất; mặc định 300s làm rollout rất chậm",
+            "  slow_start           = 30                  # tăng tải dần cho task mới (tuỳ chọn)",
+            "",
+            "  health_check {",
+            '    path                = "/health"          # nông: process sống và phục vụ được',
+            "    interval            = 15",
+            "    healthy_threshold   = 2",
+            "    unhealthy_threshold = 3",
+            "  }",
+            "}"
+          ]
+        },
+        {
+          ten: "Task definition: thời hạn tắt và health check của container",
+          noi: [
+            '"containerDefinitions": [{',
+            '  "name": "api",',
+            '  "stopTimeout": 60,',
+            '  "healthCheck": {',
+            '    "command": ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"],',
+            '    "interval": 15, "timeout": 5, "retries": 3, "startPeriod": 30',
+            "  }",
+            "}]"
+          ]
+        },
+        {
+          ten: "Ứng dụng Node.js: tắt êm khi nhận SIGTERM",
+          noi: [
+            "const server = app.listen(8080);",
+            "server.keepAliveTimeout = 65_000;   // lớn hơn idle timeout 60s của ALB → tránh 502 rải rác",
+            "server.headersTimeout   = 66_000;",
+            "",
+            "process.on(\"SIGTERM\", () => {",
+            "  server.close(async () => {          // ngừng nhận kết nối mới, đợi request đang chạy",
+            "    await db.end();                   // đóng pool, flush log / metric",
+            "    process.exit(0);",
+            "  });",
+            "  server.closeIdleConnections?.();    // đóng các kết nối keep-alive đang rảnh",
+            "  setTimeout(() => process.exit(1), 25_000).unref();   // chốt chặn, nhỏ hơn stopTimeout",
+            "});"
+          ]
+        }
+      ],
+      lenh: [
+        ["aws ecs describe-services --cluster <c> --services <s> --query 'services[0].deployments[].[status,rolloutState,desiredCount,runningCount]' --output table", "Rollout đang ở đâu: `PRIMARY` / `ACTIVE`, `rolloutState` (`IN_PROGRESS`, `COMPLETED`, `FAILED`)"],
+        ["aws ecs wait services-stable --cluster <c> --services <s>", "Chặn pipeline đến khi rollout ổn định (hoặc hết thời gian chờ)"],
+        ["aws ecs update-service --cluster <c> --service <s> --task-definition <family>:<rev> --deployment-configuration 'minimumHealthyPercent=100,maximumPercent=200,deploymentCircuitBreaker={enable=true,rollback=true}'", "Đặt cấu hình rollout bằng CLI (thường để Terraform quản lý)"],
+        ["aws elbv2 modify-target-group-attributes --target-group-arn <arn> --attributes Key=deregistration_delay.timeout_seconds,Value=30", "Đổi thời gian drain của target group"],
+        ["aws elbv2 describe-target-health --target-group-arn <arn> --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State]' --output table", "Target nào `healthy` / `draining` / `unhealthy`"],
+        ["aws ecs describe-tasks --cluster <c> --tasks <arn> --query 'tasks[0].[lastStatus,stopCode,stoppedReason]'", "Vì sao task bị dừng (rollout, health check fail, OOM…)"]
+      ],
+      bay: [
+        "`deregistration_delay` để mặc định 300s trong khi app giữ kết nối mở (keep-alive, WebSocket): rollout kéo dài rất lâu. Ngược lại đặt quá ngắn (5s) thì cắt cả request đang chạy.",
+        "Health check của ALB gọi sâu vào DB: DB chậm một nhịp, ALB đánh dấu mọi task unhealthy và ECS thay hết — biến sự cố nhỏ thành sập toàn bộ."
+      ],
+      cv: "Đúng pipeline trong CV (‘stability checks, old-revision cleanup’). Bổ sung ba điều bạn có thể nói thêm: circuit breaker, giá trị `deregistration_delay` / `stopTimeout` bạn đã đặt và vì sao, và cách worker xử lý SIGTERM. Nếu chưa đặt các giá trị này, nói thẳng và nêu cách bạn sẽ chọn (đo request dài nhất). Xem Case 5 và E4 trong ngân hàng."
+    },
+
+    /* ---------------------------------------------------------- */
+    {
+      id: "zd-eks", ten: "Case 14 — Backend zero-downtime trên EKS (Kubernetes)",
+      y: [
+        "**Khác ECS ở một điểm cốt lõi**: khi pod bị xoá, việc *gỡ khỏi Service endpoints* và việc *kubelet chạy `preStop` rồi gửi `SIGTERM`* diễn ra **song song**. Ingress / kube-proxy / ALB cần vài giây để biết → trong khoảng đó vẫn gửi request tới pod đang tắt → `502`. Cách chữa: `preStop` sleep để chờ LB ‘quên’ pod, rồi mới tắt (xem chuỗi sự kiện bên dưới).",
+        "**Rolling update**: `maxUnavailable: 0`, `maxSurge: 1` (hoặc 25%) để luôn đủ pod; `minReadySeconds` bắt pod ổn định một lúc mới tính là sẵn sàng; `progressDeadlineSeconds` để rollout kẹt bị đánh dấu thất bại thay vì treo mãi.",
+        "**Ba probe đúng vai**: `startupProbe` cho app khởi động chậm (chặn liveness giết sớm); `readinessProbe` quyết định có nhận traffic — có thể kiểm tra dependency vì chỉ *rút pod khỏi endpoint*, không giết pod; `livenessProbe` chỉ phát hiện treo cứng và **không** kiểm tra DB.",
+        "**Thời hạn tắt**: `terminationGracePeriodSeconds` ≥ `preStop` + thời gian request dài nhất + đệm (mặc định 30s). Hết hạn là `SIGKILL`. `preStop` chạy **trong** khoảng này chứ không cộng thêm.",
+        "**AWS Load Balancer Controller + ALB (`target-type: ip`)**: IP của pod đăng ký thẳng vào target group. Bật **pod readiness gate** (nhãn `elbv2.k8s.aws/pod-readiness-gate-inject=enabled` trên namespace) để pod chỉ ‘Ready’ khi target đã healthy trên ALB — nếu không, rollout có thể gỡ pod cũ trước khi ALB chấp nhận pod mới. Giữ `preStop` sleep và đặt `deregistration_delay` bằng annotation.",
+        "**PodDisruptionBudget (PDB)**: bảo vệ khi **drain node** (nâng cấp node group, Karpenter consolidation, spot interruption) — thiếu PDB thì drain có thể đuổi hết pod của một service cùng lúc. Kèm `topologySpreadConstraints` để pod rải theo AZ / node và `replicas ≥ 2`.",
+        "**HPA scale-in cũng là một lần thay pod**: cùng cơ chế tắt êm; đặt `behavior.scaleDown.stabilizationWindowSeconds` để không co giãn liên tục.",
+        "**Helm**: `helm upgrade --install --atomic --wait --timeout 5m` tự rollback khi rollout không ổn định; `helm rollback <release> <revision>` khi bản mới ‘chạy được nhưng sai’. Đổi ConfigMap / Secret mà không đổi pod spec thì pod không restart → dùng checksum annotation.",
+        "**Canary / blue-green**: Argo Rollouts hoặc Flagger (tăng traffic theo bước, phân tích metric, tự abort), hoặc ingress canary (theo weight / header). Đánh đổi: thêm controller và cấu hình — hợp dịch vụ rủi ro cao.",
+        "**Kết nối dài** (WebSocket, gRPC stream): tăng `terminationGracePeriodSeconds`, đóng có trật tự (gRPC graceful stop gửi `GOAWAY`), client **tự reconnect có backoff**.",
+        "**Lưu ý với `exec: sleep`**: nếu `preStop` dùng `exec: sleep` thì image phải có binary `sleep` (distroless thì không có). Phiên bản Kubernetes mới có `preStop.sleep` native — kiểm tra phiên bản cluster."
+      ],
+      ma: [
+        {
+          ten: "Chuỗi sự kiện khi một pod bị thay",
+          noi: [
+            "t = 0     Pod chuyển sang Terminating",
+            "            ├─ (song song) EndpointSlice bỏ pod → ingress / kube-proxy / ALB cập nhật (mất vài giây)",
+            "            └─ (song song) kubelet chạy preStop: sleep 10   ← vẫn phục vụ bình thường, chờ LB ‘quên’ pod",
+            "t = 10    kubelet gửi SIGTERM → app: ngừng nhận kết nối mới, xử lý nốt request dở, đóng pool, exit 0",
+            "t = 45    terminationGracePeriodSeconds hết hạn mà còn chạy → SIGKILL",
+            "",
+            "Quy tắc: terminationGracePeriodSeconds >= preStop (10) + thời gian drain / request dài nhất (~25) + đệm"
+          ]
+        },
+        {
+          ten: "Deployment + PodDisruptionBudget",
+          noi: [
+            "apiVersion: apps/v1",
+            "kind: Deployment",
+            "metadata: { name: api }",
+            "spec:",
+            "  replicas: 3",
+            "  minReadySeconds: 10",
+            "  progressDeadlineSeconds: 300",
+            "  strategy:",
+            "    type: RollingUpdate",
+            "    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }   # luôn đủ pod, bản mới lên trước",
+            "  selector: { matchLabels: { app: api } }",
+            "  template:",
+            "    metadata: { labels: { app: api } }",
+            "    spec:",
+            "      terminationGracePeriodSeconds: 45               # >= preStop + drain + đệm",
+            "      topologySpreadConstraints:",
+            "        - maxSkew: 1",
+            "          topologyKey: topology.kubernetes.io/zone",
+            "          whenUnsatisfiable: ScheduleAnyway",
+            "          labelSelector: { matchLabels: { app: api } }",
+            "      containers:",
+            "        - name: api",
+            "          image: <registry>/api:<sha>                 # tag theo SHA, không dùng :latest",
+            "          ports: [{ containerPort: 8080 }]",
+            "          startupProbe:   { httpGet: { path: /health/live,  port: 8080 }, periodSeconds: 5,  failureThreshold: 30 }",
+            "          readinessProbe: { httpGet: { path: /health/ready, port: 8080 }, periodSeconds: 5,  failureThreshold: 2 }",
+            "          livenessProbe:  { httpGet: { path: /health/live,  port: 8080 }, periodSeconds: 10, failureThreshold: 3 }",
+            "          lifecycle:",
+            "            preStop:",
+            '              exec: { command: ["sleep", "10"] }      # chờ ingress / ALB bỏ pod',
+            "---",
+            "apiVersion: policy/v1",
+            "kind: PodDisruptionBudget",
+            "metadata: { name: api }",
+            "spec:",
+            "  maxUnavailable: 1                                   # drain node không đuổi hết pod cùng lúc",
+            "  selector: { matchLabels: { app: api } }"
+          ]
+        },
+        {
+          ten: "ALB trên EKS: readiness gate và thời gian drain",
+          noi: [
+            "# Namespace: pod chỉ Ready khi target đã healthy trên ALB",
+            "kubectl label namespace prod elbv2.k8s.aws/pod-readiness-gate-inject=enabled",
+            "",
+            "# Ingress (AWS Load Balancer Controller)",
+            "metadata:",
+            "  annotations:",
+            "    alb.ingress.kubernetes.io/target-type: ip",
+            "    alb.ingress.kubernetes.io/healthcheck-path: /health/ready",
+            "    alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds=30"
+          ]
+        }
+      ],
+      lenh: [
+        ["kubectl rollout status deploy/<name> -n <ns> --timeout=300s", "Chặn pipeline đến khi rollout xong (hoặc thất bại)"],
+        ["kubectl rollout undo deploy/<name> -n <ns>", "Quay về ReplicaSet trước đó"],
+        ["kubectl rollout history deploy/<name> -n <ns>", "Các revision có thể quay về"],
+        ["helm upgrade --install <rel> <chart> -n <ns> -f values-prod.yaml --atomic --wait --timeout 5m", "Nâng cấp và tự rollback nếu không ổn định"],
+        ["helm rollback <rel> <rev> -n <ns> --wait", "Rollback chủ động khi bản mới chạy được nhưng sai"],
+        ["kubectl get pdb -n <ns>", "PDB hiện có và cột `ALLOWED DISRUPTIONS`"],
+        ["kubectl drain <node> --ignore-daemonsets --delete-emptydir-data", "Drain node — PDB sẽ chặn nếu vi phạm (chỉ làm khi có kế hoạch hoặc ở môi trường thử)"],
+        ["kubectl get endpointslices -l kubernetes.io/service-name=<svc> -w", "Pod nào đang trong endpoint theo thời gian thực"]
+      ],
+      bay: [
+        "Bỏ `preStop` và nghĩ `SIGTERM` là đủ: pod tắt ngay trong khi ingress / ALB vẫn còn gửi request tới IP đó → `502` rải rác đúng lúc rollout.",
+        "`terminationGracePeriodSeconds` để mặc định 30s nhưng `preStop` 10s + drain 30s: kubelet `SIGKILL` khi app còn đang tắt êm. Phải cộng đủ các khoản.",
+        "`livenessProbe` kiểm tra DB: DB chậm một nhịp thì kubelet restart hàng loạt pod — làm sự cố tệ hơn."
+      ],
+      cv: "Kotae: ‘release rollouts and rollbacks through Helm against per-environment values, autoscaling, and ingress configuration’ cùng ‘failing probes… probe thresholds’. Gắn probe, Helm rollback và ingress vào câu trả lời. Skills của bạn có EKS, nhưng CV chỉ ghi Kubernetes cho Kotae — nói đúng nền tảng bạn đã chạy. Nếu chưa cấu hình `preStop` / PDB / readiness gate, nói thẳng và nêu sẽ thêm ở đâu. Xem K2, K3, KT1 trong ngân hàng."
+    },
+
+    /* ---------------------------------------------------------- */
+    {
+      id: "zd-onprem", ten: "Case 15 — Backend zero-downtime on-prem (VM, Nginx / HAProxy, Docker Compose)",
+      y: [
+        "**Khác biệt cốt lõi**: không có ECS hay Kubernetes lo hộ — **bạn tự dựng ba thứ**: bộ cân bằng tải, cơ chế drain và health check. Đổi lại bạn kiểm soát toàn bộ và hiểu rõ bản chất.",
+        "**Điều kiện tối thiểu**: ≥ 2 instance ứng dụng (2 VM hoặc 2 container) sau Nginx / HAProxy. Chỉ có **một** instance thì không có zero-downtime thật — chỉ giảm gián đoạn xuống vài giây.",
+        "**Mẫu 1 — cuốn chiếu nhiều node**: với từng node: (1) đưa vào *drain* (không nhận kết nối mới); (2) đợi kết nối đang chạy xong hoặc hết thời hạn; (3) deploy + restart; (4) chờ health check qua (`rise`); (5) đưa lại vào pool; (6) sang node kế. **Dừng ngay nếu node đầu lỗi** (Ansible `serial: 1`, `max_fail_percentage: 0`).",
+        "**Mẫu 2 — blue/green trên một host (Docker Compose)**: `docker compose up -d` thường *dừng container cũ rồi mới tạo container mới* nên có khoảng gián đoạn. Cách tránh: chạy bản mới **song song** (project / cổng khác), health check, đổi upstream bằng `nginx -s reload` (reload của Nginx là *êm*: worker cũ xử lý nốt kết nối rồi thoát), cuối cùng dừng bản cũ sau khi drain. Công cụ như `docker rollout` tự động hoá việc scale lên 2, chờ healthy, bỏ bản cũ.",
+        "**Mẫu 3 — reload tại chỗ của chính tiến trình**: Gunicorn (`kill -HUP` đổi worker; `USR2` nâng cấp binary), `pm2 reload` (cluster mode), Nginx / HAProxy (`reload`), `ExecReload` của systemd; socket activation hoặc `SO_REUSEPORT` cho phép hai tiến trình cùng nghe một cổng khi chuyển. Hợp khi không chạy hai bản song song được.",
+        "**Drain**: HAProxy có runtime API (`set server <backend>/<server> state drain` — không nhận kết nối mới nhưng giữ kết nối đang có, sau deploy đặt `state ready`; cần `stats socket … level admin`). Nginx mã nguồn mở không có API tương đương → đánh dấu `down` trong upstream rồi `nginx -s reload`; Nginx Plus có API.",
+        "**Health check**: Nginx mã nguồn mở chỉ có *passive* (`max_fails`, `fail_timeout` — chỉ phát hiện khi có request thật); HAProxy có *active* (`option httpchk`, `inter`, `fall`, `rise`) — ưu tiên khi cần chắc chắn node đã sẵn sàng.",
+        "**LB cũng phải HA**: một Nginx duy nhất là điểm lỗi đơn. Dùng hai LB + **Keepalived (VRRP)** giữ một VIP; nâng cấp LB bằng cách chuyển VIP sang node kia trước.",
+        "**Tắt êm với systemd / Docker**: `docker stop` mặc định chỉ cho **10 giây** trước `SIGKILL` → đặt `stop_grace_period` trong Compose, `TimeoutStopSec` trong systemd. Shell làm PID 1 không chuyển tiếp SIGTERM → dùng `exec` hoặc `init: true` (tini).",
+        "**Rollback do bạn viết**: sau khi đưa node vào pool, kiểm tra bằng `curl` thật; thất bại → rút node ra và chạy lại bản cũ (giữ tag / thư mục release cũ), rồi báo qua Telegram / Slack.",
+        "**Cẩn trọng với**: session lưu trong bộ nhớ (chuyển sang Redis hoặc sticky có kế hoạch), cron / job chạy trùng khi hai bản cùng sống (dùng lock), kết nối DB tăng gấp đôi khi chạy song song, file upload lưu cục bộ trên từng node (dùng storage chung).",
+        "**On-prem Kubernetes** (kubeadm, k3s, RKE2): cơ chế giống Case 14, thay ALB bằng ingress-nginx và MetalLB; `preStop`, probe, PDB không đổi."
+      ],
+      ma: [
+        {
+          ten: "Nginx: upstream hai node, reload êm",
+          noi: [
+            "upstream app {",
+            "    server 10.0.0.11:8080 max_fails=2 fail_timeout=10s;",
+            "    server 10.0.0.12:8080 max_fails=2 fail_timeout=10s;",
+            "    # server 10.0.0.13:8080 down;      # đánh dấu down rồi reload để rút node ra khỏi pool",
+            "    keepalive 32;",
+            "}",
+            "",
+            "server {",
+            "    listen 443 ssl;",
+            "    location / {",
+            "        proxy_pass http://app;",
+            "        proxy_http_version 1.1;",
+            '        proxy_set_header Connection "";                        # cho phép keepalive tới upstream',
+            "        proxy_next_upstream error timeout http_502 http_503;   # lỗi ở một node → thử node khác (GET / HEAD)",
+            "        proxy_next_upstream_tries 2;",
+            "    }",
+            "}",
+            "# Áp dụng:  nginx -t && nginx -s reload     (worker cũ xử lý nốt kết nối rồi thoát)"
+          ]
+        },
+        {
+          ten: "HAProxy: health check chủ động và drain từng node",
+          noi: [
+            "global",
+            "    stats socket /var/run/haproxy.sock mode 660 level admin",
+            "",
+            "backend be_app",
+            "    option httpchk GET /health/ready",
+            "    http-check expect status 200",
+            "    default-server inter 3s fall 3 rise 2",
+            "    server app1 10.0.0.11:8080 check",
+            "    server app2 10.0.0.12:8080 check",
+            "",
+            "# Rút app1 khỏi pool (không nhận kết nối mới, giữ kết nối đang có):",
+            'echo "set server be_app/app1 state drain" | socat stdio /var/run/haproxy.sock',
+            "# ... đợi hết kết nối, deploy + restart app1, kiểm tra /health/ready ...",
+            'echo "set server be_app/app1 state ready" | socat stdio /var/run/haproxy.sock'
+          ]
+        },
+        {
+          ten: "Ansible: cuốn chiếu từng node, dừng nếu lỗi",
+          noi: [
+            "- hosts: app",
+            "  serial: 1                          # từng node một",
+            "  max_fail_percentage: 0             # node đầu lỗi → dừng toàn bộ",
+            "  tasks:",
+            "    - name: Rút node khỏi HAProxy (drain)       # tên server trong HAProxy = tên host trong inventory",
+            '      shell: echo "set server be_app/{{ inventory_hostname }} state drain" | socat stdio /var/run/haproxy.sock',
+            "      delegate_to: lb1",
+            "    - name: Đợi kết nối đang chạy xong",
+            "      pause: { seconds: 30 }",
+            "    - name: Cập nhật bản mới và restart dịch vụ  # (bước copy build / pull image đặt trước bước này)",
+            "      systemd: { name: app, state: restarted }",
+            "    - name: Chờ health check qua",
+            '      uri: { url: "http://{{ inventory_hostname }}:8080/health/ready", status_code: 200 }',
+            "      register: r",
+            "      until: r.status == 200",
+            "      retries: 20",
+            "      delay: 3",
+            "    - name: Đưa node trở lại pool",
+            '      shell: echo "set server be_app/{{ inventory_hostname }} state ready" | socat stdio /var/run/haproxy.sock',
+            "      delegate_to: lb1"
+          ]
+        },
+        {
+          ten: "Docker Compose một host: chạy bản mới song song rồi đổi upstream",
+          noi: [
+            "# bản mới chạy ở cổng 8081 cạnh bản cũ (8080) — chờ healthcheck của container",
+            "APP_PORT=8081 docker compose -p app-green up -d --wait",
+            "curl -fs http://127.0.0.1:8081/health/ready              # kiểm tra thật trước khi chuyển",
+            "",
+            "echo 'server 127.0.0.1:8081;' > /etc/nginx/conf.d/app-upstream.inc   # upstream { include ...; }",
+            "nginx -t && nginx -s reload                              # đổi upstream, reload êm",
+            "",
+            "sleep 30                                                 # để kết nối cũ xử lý nốt",
+            "docker compose -p app-blue down                          # dừng bản cũ (hoặc giữ lại làm đường lui)"
+          ]
+        }
+      ],
+      lenh: [
+        ["nginx -t && nginx -s reload", "Kiểm tra cấu hình rồi reload êm (không rớt kết nối đang có)"],
+        ["echo \"show servers state\" | socat stdio /var/run/haproxy.sock", "Trạng thái từng server trong HAProxy"],
+        ["ss -tn state established '( sport = :8080 )' | wc -l", "Còn bao nhiêu kết nối đang mở tới app trước khi restart"],
+        ["docker stop -t 60 <container>", "Cho 60s trước `SIGKILL` (mặc định chỉ 10s)"],
+        ["docker compose up -d --wait --wait-timeout 120", "Chờ healthcheck của container (cần khai `healthcheck`); lưu ý lệnh này vẫn tạo lại container nên với một instance vẫn có gián đoạn ngắn"],
+        ["kill -HUP $(cat /run/gunicorn.pid)", "Gunicorn: đổi worker êm (đường dẫn pid tuỳ cấu hình)"],
+        ["systemctl show <svc> -p TimeoutStopUSec", "Thời hạn systemd cho phép tắt trước khi `SIGKILL`"]
+      ],
+      bay: [
+        "Chỉ có một instance mà vẫn nói ‘zero-downtime’: `restart` luôn có khoảng gián đoạn; cần ≥ 2 instance hoặc chạy bản mới song song.",
+        "`docker stop` mặc định 10s rồi `SIGKILL`, và shell làm PID 1 không chuyển tiếp `SIGTERM`: app bị giết giữa chừng dù code đã xử lý tín hiệu — kiểm tra bằng một lần `docker stop` thật.",
+        "Một LB duy nhất: app đã zero-downtime nhưng nâng cấp hay hỏng LB là sập cả hệ thống."
+      ],
+      cv: "Dịch vụ tự quản của bạn: Nginx làm reverse proxy, deploy bằng `compose up --wait`, có đường rollback về tag cũ. Nói đúng giới hạn: `--wait` bảo đảm bản mới *khoẻ trước khi coi là xong* và có rollback, nhưng với một instance container vẫn được tạo lại nên có gián đoạn ngắn; nếu cần zero-downtime thật, bạn sẽ chuyển sang Mẫu 2 (chạy song song + `nginx reload`). Thừa nhận giới hạn rồi nêu hướng nâng cấp đáng tin hơn nhiều so với tuyên bố ‘zero-downtime’."
+    },
+
+    /* ---------------------------------------------------------- */
+    {
+      id: "zd-fe", ten: "Case 16 — Frontend zero-downtime: S3 + CloudFront, container (ECS / EKS) và on-prem",
+      y: [
+        "**FE khác BE**: SPA build ra *file tĩnh* — không có tiến trình để drain. Vấn đề là **thứ tự ghi file, cache, và người dùng đang mở bản cũ**. Kẻ thù chính là **version skew**: trình duyệt đang chạy `index.html` cũ nhưng asset cũ đã bị xoá hoặc ghi đè; hoặc `index.html` mới trỏ tới asset chưa tồn tại.",
+        "**Bốn quy tắc (đúng cho mọi nền tảng)**: (1) tên asset có **hash nội dung** và không bao giờ bị ghi đè; (2) **upload asset trước, entry (`index.html`) sau cùng**, nguyên tử; (3) **giữ asset của vài phiên bản gần nhất** — người dùng đang mở bản cũ vẫn tải được chunk cũ; (4) cache: asset `immutable` một năm, `index.html` `no-cache`, chỉ invalidate entry.",
+        "**Nền tảng 1 — S3 + CloudFront** (nên chọn cho SPA): không có server để rớt; zero-downtime là chuyện thứ tự upload và cache (Case 6). Rollback = upload lại `index.html` cũ (asset cũ vẫn còn) + invalidate `/index.html`. Rẻ, nhanh và sẵn sàng cao nhất.",
+        "**Nền tảng 2 — FE trong container (ECS Fargate / EKS)**: dùng khi SSR (Next.js, Nuxt) hoặc muốn một mô hình triển khai cho cả FE và BE. Drain / readiness / `preStop` **giống BE** (Case 13, 14). Nhưng có bẫy riêng: trong lúc rolling, **hai phiên bản FE chạy chồng nhau** — người dùng nhận HTML từ pod mới, rồi request chunk `/_next/static/abc123.js` lại rơi vào pod **cũ** (không có file đó) → 404 → trang lỗi.",
+        "**Chữa skew khi FE ở container**: (a) **đưa asset lên S3 / CDN trước khi rollout** và để container chỉ phục vụ HTML / SSR — asset của mọi phiên bản cùng tồn tại; (b) hoặc image mới chứa **asset của bản trước lẫn bản mới**; (c) hoặc định tuyến theo phiên bản (cookie / header) — phức tạp, ít dùng. Với Next.js, kiểm tra cơ chế skew protection / `deploymentId` trong tài liệu phiên bản bạn dùng.",
+        "**Nền tảng 3 — on-prem (Nginx phục vụ file tĩnh)**: cấu trúc `releases/<sha>/` + symlink `current`; chuyển bằng **đổi tên nguyên tử** (`ln -sfn` sang tên tạm rồi `mv -T`). Nginx mở file theo symlink ở mỗi request nên chuyển tức thì, không cần reload. Giữ N release gần nhất để rollback và để asset cũ còn tải được.",
+        "**FE ↔ BE tương thích hai chiều**: người dùng đang mở FE cũ vẫn gọi API của BE mới → BE phải hỗ trợ **FE phiên bản N−1**; ngược lại, FE mới có thể chạy với BE cũ trong lúc rollout lệch. Thứ tự an toàn: **BE tương thích ngược lên trước, FE lên sau**; chỉ bỏ API cũ khi log cho thấy không còn FE cũ gọi. Tính năng mới đặt sau **feature flag**.",
+        "**Phía client**: bắt lỗi tải chunk (`ChunkLoadError`, `Failed to fetch dynamically imported module`) → báo ‘có phiên bản mới, tải lại’ và `location.reload()` có giới hạn số lần; kiểm tra version định kỳ qua `/version.json` (no-cache). Service worker (PWA) có thể giữ bản cũ — cần chiến lược cập nhật có kiểm soát.",
+        "**Cấu hình lúc chạy thay vì đóng cứng lúc build**: đọc `config.json` (no-cache) để một bản build dùng cho mọi môi trường — promote giữa môi trường không phải build lại, đổi API URL không phải deploy lại FE.",
+        "**Đổi origin / CDN**: nếu chuyển phục vụ FE từ on-prem sang CloudFront thì hạ TTL DNS, chạy song song, kiểm tra header cache trước khi đổi (xem Case 3)."
+      ],
+      bang: {
+        ten: "FE trên ba nền tảng",
+        cot: ["", "S3 + CloudFront", "Container (ECS / EKS)", "On-prem (Nginx)"],
+        hang: [
+          ["Phục vụ bởi", "S3 (OAC) + CDN", "Nginx / Node trong container", "Nginx trên VM"],
+          ["Zero-downtime đến từ", "Thứ tự upload + cache; không có tiến trình để drain", "Rolling + readiness + `preStop` (như BE) **và** chống skew", "Đổi symlink nguyên tử; không cần reload"],
+          ["Rủi ro riêng", "Cache `index.html`; thiếu asset cũ", "Skew giữa pod cũ và pod mới", "Quên giữ release cũ; đè file tại chỗ"],
+          ["Rollback", "Upload lại `index.html` cũ + invalidate", "`kubectl rollout undo` / `update-service` revision cũ (asset cũ phải còn)", "Trỏ symlink về release trước (vài giây)"],
+          ["Chi phí / vận hành", "Thấp nhất", "Tốn tài nguyên nhưng một mô hình cho FE + BE", "Tự lo HA, TLS, cache"]
+        ]
+      },
+      ma: [
+        {
+          ten: "On-prem: phát hành bằng release dir + symlink nguyên tử",
+          noi: [
+            "set -euo pipefail",
+            "REL=/var/www/app/releases/$(date +%Y%m%d%H%M%S)-$GIT_SHA",
+            'mkdir -p "$REL"',
+            'tar -xzf dist.tar.gz -C "$REL"                     # giải nén build vào thư mục release MỚI (không đè gì)',
+            "",
+            'ln -sfn "$REL" /var/www/app/current.tmp            # tạo symlink tạm',
+            "mv -T /var/www/app/current.tmp /var/www/app/current   # đổi tên nguyên tử: current chuyển sang release mới",
+            "",
+            "# giữ 5 release gần nhất (asset cũ còn tải được, rollback tức thì)",
+            "ls -1dt /var/www/app/releases/* | tail -n +6 | xargs -r rm -rf",
+            "",
+            "# Rollback: trỏ lại release trước",
+            "#   ln -sfn /var/www/app/releases/<release-cũ> /var/www/app/current.tmp && mv -T /var/www/app/current.tmp /var/www/app/current"
+          ]
+        },
+        {
+          ten: "Nginx: cache đúng cho SPA tĩnh",
+          noi: [
+            "server {",
+            "    listen 443 ssl;",
+            "    root /var/www/app/current;                       # symlink → release hiện tại",
+            "",
+            "    location / {",
+            "        try_files $uri /index.html;                  # SPA routing",
+            "    }",
+            "    location = /index.html {",
+            '        add_header Cache-Control "no-cache";         # luôn hỏi lại → thấy bản mới ngay',
+            "    }",
+            "    location = /config.json {",
+            '        add_header Cache-Control "no-cache";',
+            "    }",
+            "    location /assets/ {",
+            '        add_header Cache-Control "public, max-age=31536000, immutable";   # file có hash',
+            "    }",
+            "}"
+          ]
+        },
+        {
+          ten: "FE trong container: thứ tự pipeline để không bị skew (ví dụ Next.js)",
+          noi: [
+            "1) npm run build                          # asset có hash, assetPrefix trỏ về CDN",
+            "2) aws s3 sync .next/static s3://$BUCKET/_next/static \\",
+            "     --cache-control 'public,max-age=31536000,immutable'     # KHÔNG dùng --delete",
+            "3) docker build + push image              # image chỉ chứa server / HTML",
+            "4) deploy (ecs update-service / helm upgrade --atomic)",
+            "     → pod cũ hay mới đều trỏ asset trên CDN, nên chunk nào cũng tải được",
+            "5) sau vài phiên bản: dọn asset quá cũ bằng S3 lifecycle rule"
+          ]
+        }
+      ],
+      lenh: [
+        ["curl -sI https://app.example.com/ | grep -iE 'cache-control|etag|x-cache'", "Header cache của entry"],
+        ["curl -s https://app.example.com/version.json", "Phiên bản đang chạy (nếu build có sinh `version.json`)"],
+        ["aws s3 sync dist/ s3://<bucket> --exclude index.html --cache-control 'public,max-age=31536000,immutable'", "Upload asset trước — không dùng `--delete`"],
+        ["aws cloudfront create-invalidation --distribution-id <id> --paths /index.html", "Chỉ invalidate entry"],
+        ["readlink -f /var/www/app/current", "Release nào đang được phục vụ"],
+        ["ls -1dt /var/www/app/releases/* | head", "Các release còn giữ"],
+        ["nginx -T 2>/dev/null | grep -n open_file_cache", "Có bật cache file mở không (có thể làm trễ khi đổi symlink)"]
+      ],
+      bay: [
+        "Dùng `s3 sync --delete` hoặc ghi `index.html` trước asset: người đang mở bản cũ gặp 404 chunk, người mới thấy `index.html` trỏ file chưa có.",
+        "FE trong container, asset nằm trong image, rolling update: request chunk rơi sai phiên bản → 404 lẻ tẻ mà test thủ công không thấy.",
+        "Đổi API theo hướng phá vỡ cùng lúc với FE mới: FE cũ đang mở trong trình duyệt người dùng lỗi hàng loạt cho tới khi họ tải lại."
+      ],
+      cv: "CV: ‘immutable cache-control on hashed assets with targeted invalidation for zero-downtime SPA deploys’ — bạn đã có đáp án cho S3 + CloudFront (Case 6). Mở rộng bằng: ‘nếu FE chạy trong container thì có thêm bẫy skew, em xử lý bằng…’ và nhắc quy tắc *BE tương thích ngược lên trước, FE sau*. Đó là cách nối FE và BE thành một câu chuyện zero-downtime hoàn chỉnh. Xem E6 trong ngân hàng."
     }
   ]
 };

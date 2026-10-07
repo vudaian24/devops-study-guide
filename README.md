@@ -30,7 +30,7 @@ Mỗi tab là **một file HTML riêng**; thanh tab ở đầu trang dùng chung
 | AWS | `aws.html` | VPC, ECS Fargate, EKS, Aurora/ElastiCache, CloudFront/WAF/S3, SQS/SES, IAM/Secrets Manager/Cognito, Backup, Bedrock |
 | Monitoring | `monitoring.html` | CloudWatch Logs, Grafana, cảnh báo |
 | Database | `database.html` | PostgreSQL, MySQL, MongoDB, Redis, migration, backup/HA |
-| **Case thực tế** | `cases.html` | 11 tình huống DevOps thật: multi-tenant, migration schema, cutover hệ thống, truy cập DB trong private network, rollout/rollback ECS, phát hành SPA, OOMKilled, SSRF, lộ/xoay secret, restore một tenant, chi phí AWS |
+| **Case thực tế** | `cases.html` | 16 tình huống DevOps thật: multi-tenant, migration schema, cutover hệ thống, truy cập DB trong private network, rollout/rollback ECS, phát hành SPA, OOMKilled, SSRF, lộ/xoay secret, restore một tenant, chi phí AWS, và **zero-downtime cho FE + BE** trên ECS Fargate / EKS / on-prem (cơ chế chung, từng nền tảng, kiểm chứng bằng tải) |
 | Ngân hàng câu hỏi | `bank.html` | 91 câu hỏi có gợi ý ẩn, lọc theo chủ đề / ưu tiên, đánh dấu đã thuộc |
 
 Cuối mỗi trang kiến thức có liên kết **“Luyện lại bằng câu hỏi”** nhảy thẳng tới đúng chủ đề trong ngân hàng

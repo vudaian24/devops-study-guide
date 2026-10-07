@@ -141,6 +141,15 @@ function render() {
     }), { rootMargin: "-80px 0px -65% 0px" });
     $$(".kb-sec").forEach(s => io.observe(s));
   }
+
+  /* Liên kết sâu (cases.html#truy-cap-db-private): nội dung dựng bằng JS nên trình duyệt có thể cuộn
+     trước khi mục tồn tại, hoặc bị scroll-behavior: smooth làm dở dang trên trang dài */
+  if (location.hash.length > 1) {
+    let id = location.hash.slice(1);
+    try { id = decodeURIComponent(id); } catch (e) {}
+    const el = document.getElementById(id);
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "instant" }));
+  }
 }
 
 render();
