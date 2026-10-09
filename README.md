@@ -17,9 +17,9 @@ open index.html          # macOS (Linux: xdg-open)
 Không cần server, không cần build, chạy được offline. Cũng deploy thẳng lên GitHub Pages được
 (có `.nojekyll`, mọi trang đều `noindex`).
 
-## Mười trang
+## Mười một trang
 
-Mỗi tab là **một file HTML riêng**; thanh tab ở đầu trang dùng chung.
+Mỗi tab là **một file HTML riêng**. Danh sách trang không bày thành dải tab mà nằm trong **menu ẩn** (nút ☰ Menu ở góc trái thanh trên) cho đỡ rối mắt.
 
 | Tab | File | Nội dung |
 |---|---|---|
@@ -32,6 +32,7 @@ Mỗi tab là **một file HTML riêng**; thanh tab ở đầu trang dùng chung
 | Database | `database.html` | PostgreSQL, MySQL, MongoDB, Redis, migration, backup/HA |
 | **Case thực tế** | `cases.html` | 16 tình huống DevOps thật: multi-tenant, migration schema, cutover hệ thống, truy cập DB trong private network, rollout/rollback ECS, phát hành SPA, OOMKilled, SSRF, lộ/xoay secret, restore một tenant, chi phí AWS, và **zero-downtime cho FE + BE** trên ECS Fargate / EKS / on-prem (cơ chế chung, từng nền tảng, kiểm chứng bằng tải) |
 | **Debug sự cố** | `incident.html` | Khung xử lý sự cố production + 10 kịch bản: 5xx sau deploy, hệ thống chậm, database quá tải, pod Kubernetes không lên, ECS task bị dừng, đầy đĩa, mạng / DNS, chứng chỉ hết hạn, hàng đợi SQS ùn, rò rỉ tài nguyên; kèm cách viết postmortem |
+| **K8s cơ bản** | `k8s-co-ban.html` | Series 9 bài thực hành (Minikube → Deployment → Service/Ingress/Gateway API → ConfigMap/Secret → EKS → Helm → CI/CD → Prometheus/Grafana → autoscaling), phỏng theo series *Kubernetes cơ bản* trên DevOps VietNam và rà soát lại; mỗi chỗ sửa so với bài gốc có khung giải thích. Danh sách bài lồng ngay trong menu ẩn, dưới mục K8s cơ bản (`M`), có chế độ tập trung (`F`), `←` `→` đổi bài |
 | Ngân hàng câu hỏi | `bank.html` | 91 câu hỏi có gợi ý ẩn, lọc theo chủ đề / ưu tiên, đánh dấu đã thuộc |
 
 Cuối mỗi trang kiến thức có liên kết **“Luyện lại bằng câu hỏi”** nhảy thẳng tới đúng chủ đề trong ngân hàng
@@ -88,6 +89,19 @@ Trong chuỗi: `` `code` `` → ô mã, `**đậm**`, `*nghiêng*`. Có thể đ
    (giữ nguyên hai thẻ `robots` / `googlebot` noindex).
 3. Viết `js/kb/<trang>.js`. Thanh tab, nút Trước/Tiếp và mục lục tự cập nhật.
 
+### Sửa / thêm một series bài học (trang kiểu K8s cơ bản)
+
+Nội dung nằm ở `content/<series>/*.md` — Markdown thường, mỗi file một bài; quy ước xem `content/README.md`.
+Sửa xong chạy:
+
+```bash
+node scripts/build-lessons.mjs     # gói .md thành js/series/<series>.js (cần Node, không cần npm install)
+```
+
+Người đọc **không** cần Node: file `js/series/*.js` sinh ra được commit cùng repo. Đừng sửa tay file đó.
+Series mới: tạo thư mục trong `content/`, copy `k8s-co-ban.html` (đổi `data-page`, `<title>`, đường dẫn
+`js/series/<series>.js`) và thêm một dòng vào `TABS`.
+
 ### Sửa / thêm câu hỏi trong ngân hàng
 
 Chỉ sửa `js/data.js`, không cần đụng vào HTML. Mỗi câu là một object:
@@ -119,12 +133,22 @@ Bọc lệnh bằng dấu backtick — ví dụ `` `kubectl logs --previous` `` 
 ```
 devops-study-guide/
 ├── index.html … incident.html, bank.html   mỗi tab một trang
-├── css/style.css                         giao diện, dark/light, responsive, bản in
+├── k8s-co-ban.html                       trang học theo series
+├── content/
+│   ├── README.md                         quy ước viết bài (frontmatter, callout)
+│   └── k8s-co-ban/                       series.json + 01-…md … 09-…md — sửa nội dung bài ở đây
+├── scripts/build-lessons.mjs             gói content/<series>/*.md → js/series/<series>.js
+├── css/
+│   ├── style.css                         giao diện, dark/light, responsive, bản in
+│   └── lesson.css                        riêng trang học: callout, ngăn kéo bài, chế độ tập trung
 └── js/
-    ├── theme-init.js   áp nền sáng/tối trước khi vẽ (tránh nháy)
+    ├── theme-init.js   áp nền sáng/tối (và chế độ tập trung) trước khi vẽ (tránh nháy)
     ├── common.js       danh sách TABS, thanh tab, theme, trạng thái lưu
     ├── kb.js           dựng một trang kiến thức từ biến TRANG
     ├── kb/<trang>.js   nội dung từng trang — sửa ở đây
+    ├── md.js           Markdown → HTML theo class của trang kiến thức
+    ├── lesson.js       dựng trang học: bài theo #bai-N, ngăn kéo, tập trung, phím tắt, tiến độ
+    ├── series/<id>.js  SINH TỰ ĐỘNG từ content/ — không sửa tay
     ├── data.js         ngân hàng câu hỏi (91 câu) + META
     └── app.js          lọc, tìm kiếm, lưu tiến độ của ngân hàng câu hỏi
 ```
