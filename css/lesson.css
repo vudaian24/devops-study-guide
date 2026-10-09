@@ -5,8 +5,8 @@
    nội dung Markdown, callout, phần riêng của ngăn kéo bài học, nút nổi, chế độ tập trung.
    ============================================================ */
 
-:root                { --upd: #a78bfa; }
-[data-theme="light"] { --upd: #6d28d9; }
+:root                { --imp: #a78bfa; }
+[data-theme="light"] { --imp: #6d28d9; }
 
 /* ---------- 1. Nội dung Markdown trong panel ---------- */
 .md-p { margin: 0; font-size: 14px; color: var(--text-dim); }
@@ -47,7 +47,7 @@
   padding: 12px 14px;
 }
 .md-tip     { --c: var(--strong); }
-.md-upd     { --c: var(--upd); }
+.md-imp     { --c: var(--imp); }
 .md-warn    { --c: var(--high); }
 .md-caution { --c: var(--gap); }
 .md-c-ico { flex: none; width: 18px; text-align: center; color: var(--c); font-weight: 700; }
@@ -56,15 +56,6 @@
 .md-c-body > * + * { margin-top: 8px; }
 .md-c-t { display: block; margin-bottom: 3px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
 .md-callout .md-p, .md-callout .pts li { font-size: 13.4px; }
-
-/* Chip mẫu trong khung "Bài gốc và phạm vi rà soát" */
-.md-upd-chip {
-  display: inline-block; white-space: nowrap;
-  font-size: 11.5px; font-weight: 650; color: var(--upd);
-  background: color-mix(in srgb, var(--upd) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--upd) 30%, transparent);
-  padding: 0 7px; border-radius: 6px;
-}
 
 /* ---------- 3. Nút chế độ tập trung (thanh trên) + đánh dấu đã học ---------- */
 #focusToggle[aria-pressed="true"] { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }

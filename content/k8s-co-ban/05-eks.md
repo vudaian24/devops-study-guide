@@ -1,46 +1,60 @@
 ---
-ten: EKS — chạy cluster thật trên AWS
+ten: EKS — triển khai cluster trên AWS
 goc: https://devops.vn/posts/kubernetes-eks-aws-trien-khai-cluster/
 thoiGian: 45 phút (≈20 phút chờ tạo cluster)
-chip: EKS, eksctl, ClusterConfig, managed node group, NLB, access entry
+chip: Amazon EKS, eksctl, AWS CLI, managed node group, Network Load Balancer
 bank: Kubernetes
 ---
 
-**Amazon EKS** là Kubernetes do AWS quản lý control plane (API server, etcd, scheduler…): AWS lo vá lỗi, sao lưu và độ sẵn sàng của phần đó; bạn lo **node** chạy workload và mọi thứ chạy trên cluster. Manifest bạn viết ở các bài trước chạy được nguyên vẹn trên EKS — khác biệt nằm ở mạng, load balancer, quyền truy cập và **tiền**.
+**Amazon EKS** (Elastic Kubernetes Service) là dịch vụ Kubernetes do AWS quản lý: AWS vận hành control plane (API server, etcd…) — vá lỗi, sao lưu, đảm bảo luôn sẵn sàng — còn bạn quản lý các **node** chạy ứng dụng. Ở các bài trước bạn đã thực hành trên Minikube; bài này tạo một cluster EKS thật bằng **eksctl** và triển khai Nginx ra Internet. Mọi file YAML đã viết đều chạy được trên EKS mà không cần sửa.
 
 > [!CAUTION]
-> Bài này tạo tài nguyên **tính tiền theo giờ** (control plane, EC2, NAT Gateway, load balancer). Làm xong là xoá ngay theo mục *Dọn dẹp*, và đặt AWS Budget cảnh báo trước khi bắt đầu.
+> Bài này tạo tài nguyên **tính tiền theo giờ**. Làm xong là xoá ngay theo Bước 5, và nên đặt cảnh báo chi phí (AWS Budgets) trước khi bắt đầu.
 
 ## Chi phí ước tính
 
-Giá tham khảo vùng Singapore (`ap-southeast-1`) tại thời điểm rà soát — kiểm tra lại trên trang giá của AWS.
+Giá tham khảo vùng Singapore (`ap-southeast-1`), có thể thay đổi — kiểm tra lại trên trang giá của AWS.
 
 | Tài nguyên | Giá xấp xỉ | Ghi chú |
 |---|---|---|
-| Control plane EKS | 0,10 USD/giờ | Lên **0,60 USD/giờ** nếu phiên bản Kubernetes đã hết *standard support* |
-| 2 × EC2 `t3.medium` | ~0,05 USD/giờ mỗi node | Dùng Spot rẻ hơn nhiều, xem mục Mẹo |
-| NAT Gateway | ~0,06 USD/giờ + phí dữ liệu | eksctl tạo mặc định cho subnet private |
-| Network Load Balancer | ~0,03 USD/giờ + phí dùng | Sinh ra khi tạo Service `LoadBalancer` |
-| **Cộng** | **~0,30 USD/giờ ≈ 7 USD/ngày** | Quên xoá một tháng ≈ 200 USD |
+| Control plane EKS | 0,10 USD / giờ | 0,60 USD / giờ nếu phiên bản Kubernetes đã hết hạn hỗ trợ chuẩn — nhớ nâng cấp cluster định kỳ |
+| 2 node EC2 `t3.medium` | ~0,05 USD / giờ mỗi node | |
+| NAT Gateway | ~0,06 USD / giờ + phí dữ liệu | eksctl tạo để node trong subnet private ra được Internet |
+| Network Load Balancer | ~0,03 USD / giờ + phí sử dụng | Tạo ra ở Bước 4 |
+| **Tổng** | **~0,30 USD / giờ (~7 USD / ngày)** | Quên xoá một tháng ≈ 200 USD |
 
-> [!IMPORTANT]
-> Bản gốc chỉ tính control plane và node `t3.small`, bỏ sót NAT Gateway và load balancer — hai khoản hay khiến người mới bất ngờ khi nhận hoá đơn. Bản gốc cũng không nhắc phí *extended support*: cluster để quá hạn hỗ trợ của phiên bản Kubernetes sẽ đắt gấp 6 lần.
+## Bước 1: Chuẩn bị môi trường AWS và cài công cụ
 
-## Bước 1: Đăng nhập AWS CLI đúng cách
+Cần ba công cụ: **AWS CLI**, **kubectl** (đã cài ở bài 1) và **eksctl**.
 
-Ưu tiên đăng nhập bằng **IAM Identity Center (SSO)** — thông tin đăng nhập ngắn hạn, tự hết hạn:
+**Cài AWS CLI** — xem hướng dẫn cho từng hệ điều hành tại [AWS CLI install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html). Trên macOS: `brew install awscli`.
+
+**Đăng nhập AWS CLI.** Cách được khuyến nghị là **IAM Identity Center (SSO)** — thông tin đăng nhập là tạm thời và tự hết hạn:
 
 ```bash
-aws configure sso                 # làm một lần: nhập Start URL, region, chọn account / role
+aws configure sso                   # làm một lần: nhập SSO start URL, region, chọn account và role
 aws sso login --profile hoc-k8s
-export AWS_PROFILE=hoc-k8s
-aws sts get-caller-identity       # xác nhận đang dùng đúng account / role
+export AWS_PROFILE=hoc-k8s          # Windows PowerShell: $env:AWS_PROFILE="hoc-k8s"
 ```
 
-> [!IMPORTANT]
-> Bản gốc dùng `aws configure` với Access Key / Secret Key của IAM user — khoá dài hạn, nằm dạng rõ trong `~/.aws/credentials`, là nguồn lộ thông tin phổ biến nhất trên AWS. Chỉ dùng khoá dài hạn khi tài khoản cá nhân không có Identity Center, và khi đó bật MFA, cấp quyền tối thiểu, xoay khoá định kỳ.
+Kiểm tra đã đăng nhập đúng tài khoản:
 
-## Bước 2: Cài eksctl
+```bash
+aws sts get-caller-identity
+```
+
+```text
+{
+    "UserId": "AROAXXXXXXXXXXXXXXXXX:ten-ban",
+    "Account": "123456789012",
+    "Arn": "arn:aws:sts::123456789012:assumed-role/AWSReservedSSO_AdminAccess_xxxx/ten-ban"
+}
+```
+
+> [!WARNING]
+> Tài khoản cá nhân chưa có IAM Identity Center thì có thể dùng `aws configure` với Access Key của một IAM user. Khi đó: bật MFA, chỉ cấp quyền cần thiết, không bao giờ commit file `~/.aws/credentials`, và xoá key khi không dùng nữa.
+
+**Cài eksctl** — công cụ chính thức để tạo và quản lý cluster EKS:
 
 ```bash
 # macOS
@@ -52,81 +66,124 @@ PLATFORM=$(uname -s)_$ARCH
 curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
 tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
 sudo install -m 0755 /tmp/eksctl /usr/local/bin/eksctl
+```
 
+```bash
 eksctl version
 ```
 
-> [!IMPORTANT]
-> Bản gốc tải từ `github.com/weaveworks/eksctl` và cố định file `amd64`. Weaveworks đã đóng cửa năm 2024; eksctl giờ do AWS duy trì tại `github.com/eksctl-io/eksctl`. Link cũ có thể vẫn chuyển hướng được, nhưng đừng dựa vào điều đó.
+## Bước 2: Tạo cluster EKS với eksctl
 
-## Bước 3: Mô tả cluster bằng file
-
-Thay vì một dòng lệnh dài, mô tả cluster trong file `cluster.yaml` — đọc lại được, commit được, tạo lại y hệt được:
+Thay vì một dòng lệnh dài, mô tả cluster trong file `cluster.yaml` — dễ đọc, lưu được vào Git và tạo lại y hệt được:
 
 ```yaml
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: hoc-k8s
+  name: my-cluster
   region: ap-southeast-1
-  # version: "1.xx"     # bỏ trống = bản mặc định của eksctl; production nên ghi rõ
 managedNodeGroups:
-  - name: ng-default
+  - name: my-nodes
     instanceType: t3.medium
     desiredCapacity: 2
     minSize: 1
     maxSize: 3
     volumeSize: 20
-    privateNetworking: true   # node nằm subnet private, ra Internet qua NAT
+    privateNetworking: true
 ```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `metadata.name`, `region` | Tên cluster và vùng AWS. `ap-southeast-1` (Singapore) gần Việt Nam nhất |
+| `managedNodeGroups` | Nhóm node do AWS quản lý vòng đời (tạo, vá, thay thế) |
+| `instanceType: t3.medium` | Loại EC2. Mỗi node `t3.medium` chứa tối đa 17 Pod — đủ chỗ cho Pod hệ thống và ứng dụng của bài |
+| `desiredCapacity`, `minSize`, `maxSize` | Số node mong muốn và giới hạn khi co giãn |
+| `privateNetworking: true` | Node nằm trong subnet private, không có IP public — an toàn hơn |
+
+Không ghi `version` thì eksctl dùng phiên bản Kubernetes mặc định của nó; cluster thật nên ghi rõ, ví dụ `version: "1.xx"`.
+
+Xem trước cấu hình đầy đủ rồi tạo cluster (mất khoảng 15–20 phút):
 
 ```bash
-eksctl create cluster -f cluster.yaml --dry-run    # xem cấu hình đầy đủ eksctl sẽ dùng
-eksctl create cluster -f cluster.yaml              # ~15–20 phút
+eksctl create cluster -f cluster.yaml --dry-run
+eksctl create cluster -f cluster.yaml
 ```
 
-eksctl tạo VPC, subnet public/private, NAT Gateway, IAM role, control plane, node group, rồi ghi kubeconfig và chuyển context sang cluster mới:
+eksctl tự tạo VPC, subnet public / private, NAT Gateway, IAM role, control plane và node group. Kết thúc:
+
+```text
+[✔]  EKS cluster "my-cluster" in "ap-southeast-1" region is ready
+```
+
+eksctl cũng tự cấu hình `kubectl` trỏ vào cluster mới. Kiểm tra:
 
 ```bash
 kubectl config current-context
 kubectl get nodes -o wide
 ```
 
-> [!IMPORTANT]
-> Bản gốc dùng `t3.small`. Với VPC CNI mặc định, mỗi Pod chiếm một IP của node và `t3.small` chỉ chứa tối đa 11 Pod — khoảng một nửa đã bị các Pod hệ thống (`aws-node`, `kube-proxy`, `coredns`…) dùng, nên dễ gặp Pod `Pending` khó hiểu. `t3.medium` (17 Pod) thoải mái hơn cho lab. Vùng `ap-southeast-1` gần Việt Nam hơn `us-east-1` của bản gốc; hai vùng đều dùng được.
-
-> [!TIP]
-> Lab tiết kiệm: thay `instanceType` bằng `instanceTypes: ["t3.medium", "t3a.medium"]` và thêm `spot: true` — node Spot rẻ hơn khoảng 60–70%, đổi lại có thể bị AWS thu hồi (Deployment sẽ tự dời Pod sang node khác).
-
-> [!NOTE]
-> **EKS Auto Mode** là lựa chọn khác: `eksctl create cluster --name hoc-k8s --region ap-southeast-1 --enable-auto-mode`. AWS quản lý luôn cả node, autoscaling (Karpenter), load balancer và EBS — ít việc vận hành hơn, có thêm phí quản lý trên mỗi node. Bài này dùng managed node group để bạn còn nhìn thấy node.
-
-## Bước 4: Ai được truy cập cluster
-
-IAM identity tạo cluster được eksctl cấp quyền admin. Để cấp quyền cho người hoặc role khác (ví dụ role CI/CD ở bài 7), dùng **access entry**:
-
-```bash
-aws eks create-access-entry --cluster-name hoc-k8s \
-  --principal-arn arn:aws:iam::<ACCOUNT_ID>:role/<TÊN_ROLE>
-
-aws eks associate-access-policy --cluster-name hoc-k8s \
-  --principal-arn arn:aws:iam::<ACCOUNT_ID>:role/<TÊN_ROLE> \
-  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy \
-  --access-scope type=namespace,namespaces=hoc-k8s
+```text
+NAME                                              STATUS   ROLES    AGE   VERSION
+ip-192-168-101-23.ap-southeast-1.compute.internal  Ready    <none>   5m    v1.xx.x-eks-xxxxxxx
+ip-192-168-142-87.ap-southeast-1.compute.internal  Ready    <none>   5m    v1.xx.x-eks-xxxxxxx
 ```
 
-> [!IMPORTANT]
-> Tài liệu cũ (và nhiều bài trên mạng) cấp quyền bằng cách sửa ConfigMap `aws-auth` trong `kube-system` — gõ sai một dòng YAML là khoá chính mình khỏi cluster. Access entry là API của AWS, quản lý được bằng CLI / Terraform và giờ là cách được khuyến nghị; `aws-auth` đã bị deprecate.
+Hai node `Ready` là cluster đã sẵn sàng.
 
-## Bước 5: Triển khai ứng dụng và mở ra Internet
+> [!TIP]
+> Tiết kiệm cho lab: dùng EC2 Spot rẻ hơn khoảng 60–70%. Trong `cluster.yaml`, thay `instanceType: t3.medium` bằng `instanceTypes: ["t3.medium", "t3a.medium"]` và thêm `spot: true`. Node Spot có thể bị AWS thu hồi, khi đó Deployment tự dời Pod sang node khác.
 
-Dùng lại `nginx-deployment.yaml` của bài 2, thêm file `nginx-lb.yaml`:
+## Bước 3: Cấp quyền truy cập cluster cho người khác
+
+Tài khoản tạo cluster tự có quyền quản trị. Muốn cấp quyền cho đồng nghiệp hoặc cho pipeline CI/CD (bài 7), dùng **access entry**:
+
+```bash
+aws eks create-access-entry --cluster-name my-cluster \
+  --principal-arn arn:aws:iam::<ACCOUNT_ID>:role/<TEN_ROLE>
+
+aws eks associate-access-policy --cluster-name my-cluster \
+  --principal-arn arn:aws:iam::<ACCOUNT_ID>:role/<TEN_ROLE> \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy \
+  --access-scope type=namespace,namespaces=default
+```
+
+Lệnh trên cho role được sửa tài nguyên trong namespace `default`. Các policy có sẵn khác: `AmazonEKSViewPolicy` (chỉ xem), `AmazonEKSAdminPolicy`, `AmazonEKSClusterAdminPolicy` (toàn quyền). Bỏ qua bước này nếu chỉ một mình bạn dùng cluster.
+
+## Bước 4: Triển khai ứng dụng đơn giản trên EKS
+
+Tạo file `nginx-eks.yaml` gồm Deployment (giống bài 2) và Service loại `LoadBalancer`:
 
 ```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.28
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-lb
+  name: nginx-service
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
 spec:
@@ -135,48 +192,73 @@ spec:
     app: nginx
   ports:
     - name: http
+      protocol: TCP
       port: 80
       targetPort: http
 ```
 
-```bash
-kubectl create namespace hoc-k8s
-kubectl config set-context --current --namespace=hoc-k8s
-kubectl apply -f nginx-deployment.yaml -f nginx-lb.yaml
-kubectl get service nginx-lb --watch       # đợi cột EXTERNAL-IP có tên miền *.elb.amazonaws.com
-```
-
-DNS của load balancer mất 1–3 phút mới phân giải được:
+- `type: LoadBalancer`: AWS tự tạo một load balancer có địa chỉ public, trỏ về các Pod.
+- Annotation `aws-load-balancer-type: nlb`: dùng **Network Load Balancer** — loại load balancer thế hệ mới, hiệu năng cao.
 
 ```bash
-curl -s "http://$(kubectl get svc nginx-lb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" | head -n 4
+kubectl apply -f nginx-eks.yaml
+kubectl rollout status deployment/nginx-deployment
+kubectl get service nginx-service --watch
 ```
 
-> [!IMPORTANT]
-> Bản gốc tạo Service `LoadBalancer` không annotation — AWS sẽ tạo **Classic Load Balancer**, thế hệ cũ AWS khuyên không dùng cho hệ thống mới. Annotation trên đổi sang Network Load Balancer. Trong production, cài **AWS Load Balancer Controller** (cần IAM role riêng, cài bằng Helm): nó tạo NLB trỏ thẳng IP Pod và ALB cho Ingress / Gateway API, với nhiều tuỳ chọn hơn.
+Đợi tới khi cột `EXTERNAL-IP` có tên miền (1–2 phút), nhấn `Ctrl+C`:
 
-> [!NOTE]
-> Ứng dụng cần gọi API của AWS (S3, SQS…) thì cấp quyền bằng **EKS Pod Identity** (`eksctl create podidentityassociation`) — mỗi ServiceAccount một IAM role. Đừng gắn quyền vào IAM role của node: mọi Pod trên node sẽ dùng chung quyền đó.
+```text
+NAME            TYPE           CLUSTER-IP      EXTERNAL-IP                                                                  PORT(S)        AGE
+nginx-service   LoadBalancer   10.100.87.214   a1b2c3d4e5f6...-0123456789abcdef.elb.ap-southeast-1.amazonaws.com   80:31234/TCP   90s
+```
 
-## Dọn dẹp — làm ngay khi xong
-
-**Xoá Service `LoadBalancer` trước** — nếu không, load balancer và network interface của nó còn bám trong VPC, khiến bước xoá VPC của eksctl kẹt hoặc thất bại, và NLB tiếp tục tính tiền:
+Tên miền của load balancer cần thêm 1–3 phút để có hiệu lực. Sau đó:
 
 ```bash
-kubectl delete -f nginx-lb.yaml
-kubectl get svc -A | grep LoadBalancer      # phải không còn dòng nào
-eksctl delete cluster -f cluster.yaml --wait
+LB=$(kubectl get service nginx-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+curl -s "http://$LB" | head -n 4
 ```
 
-Sau đó vào AWS Console kiểm tra không còn sót: **EC2 → Load Balancers**, **VPC → NAT gateways**, **VPC → Elastic IPs**, **CloudFormation** (stack `eksctl-hoc-k8s-*`).
+Hoặc mở `http://<EXTERNAL-IP>` trên trình duyệt — bạn sẽ thấy trang **Welcome to nginx!**, lần này chạy trên AWS và truy cập được từ bất cứ đâu.
 
-Cuối cùng trỏ kubectl về Minikube cho các bài sau: `kubectl config use-context minikube`.
+## Bước 5: Xoá tài nguyên để dọn dẹp
 
-## Tóm tắt
+Làm **đúng thứ tự**: xoá Service `LoadBalancer` trước. Nếu xoá cluster ngay, load balancer do Kubernetes tạo có thể còn sót lại, vừa tiếp tục tính tiền vừa khiến eksctl không xoá được VPC.
 
-- Mô tả cluster bằng file `ClusterConfig`; đăng nhập AWS bằng SSO, không dùng khoá dài hạn.
-- Cấp quyền vào cluster bằng access entry; cấp quyền AWS cho Pod bằng Pod Identity.
-- Service `LoadBalancer` nên là NLB; production dùng AWS Load Balancer Controller.
-- Chi phí thật gồm cả NAT Gateway và load balancer. Xoá Service `LoadBalancer` trước khi xoá cluster.
+```bash
+kubectl delete -f nginx-eks.yaml
+kubectl get service -A | grep LoadBalancer       # phải không còn dòng nào
+eksctl delete cluster -f cluster.yaml --wait     # mất khoảng 10 phút
+```
 
-Tài liệu: [eksctl](https://eksctl.io/) · [EKS — access entries](https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html) · [EKS pricing](https://aws.amazon.com/eks/pricing/) · [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/)
+```text
+[✔]  all cluster resources were deleted
+```
+
+Sau đó vào AWS Console kiểm tra không còn sót: **EC2 → Load Balancers**, **VPC → NAT gateways**, **VPC → Elastic IPs**, **CloudFormation** (các stack `eksctl-my-cluster-*`).
+
+Cuối cùng, trỏ kubectl về Minikube cho các bài sau:
+
+```bash
+kubectl config use-context minikube
+```
+
+## Xử lý sự cố thường gặp
+
+| Hiện tượng | Nguyên nhân | Cách xử lý |
+|---|---|---|
+| `eksctl create cluster` báo lỗi quyền (`AccessDenied`) | Role / user thiếu quyền tạo VPC, IAM, EKS | Dùng role quản trị cho lab, hoặc bổ sung quyền theo tài liệu eksctl |
+| Token SSO hết hạn: `The SSO session has expired` | Phiên SSO có thời hạn | `aws sso login --profile hoc-k8s` |
+| `EXTERNAL-IP` mãi `<pending>` | Đang tạo load balancer, hoặc subnet thiếu tag cho load balancer | Đợi 2–3 phút; `kubectl describe service nginx-service` xem Events |
+| `curl` tới load balancer không phản hồi | DNS chưa có hiệu lực | Đợi thêm vài phút rồi thử lại |
+| Pod mãi `Pending` | Node hết chỗ (CPU / RAM / số Pod) | `kubectl describe pod` xem Events; tăng `desiredCapacity` hoặc dùng loại EC2 lớn hơn |
+| `eksctl delete cluster` kẹt ở bước xoá VPC | Còn load balancer / network interface trong VPC | Xoá Service `LoadBalancer` còn sót, xoá load balancer trong Console rồi chạy lại |
+
+## Lưu ý quan trọng
+
+- **Chi phí**: luôn xoá cluster sau khi thử nghiệm và đặt AWS Budgets. Ngoài control plane và node, NAT Gateway và load balancer cũng tính tiền theo giờ.
+- **Load balancer trong production**: cài **AWS Load Balancer Controller** (bằng Helm, bài 6). Nó tạo NLB trỏ thẳng IP Pod và ALB cho Ingress / Gateway API, với nhiều tuỳ chọn hơn (TLS, WAF, health check).
+- **Quyền cho ứng dụng**: Pod cần gọi dịch vụ AWS (S3, SQS…) thì dùng **EKS Pod Identity** để gắn IAM role riêng cho từng ServiceAccount — không gắn quyền vào role của node, vì mọi Pod trên node sẽ dùng chung.
+- **EKS Auto Mode**: lựa chọn ít việc vận hành hơn — AWS quản lý luôn node, autoscaling, load balancer và ổ đĩa. Tạo bằng `eksctl create cluster --name my-cluster --region ap-southeast-1 --enable-auto-mode`; có thêm phí quản lý trên mỗi node.
+- Tài liệu: [Amazon EKS User Guide](https://docs.aws.amazon.com/eks/latest/userguide/) · [eksctl](https://eksctl.io/) · [EKS access entries](https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html) · [EKS pricing](https://aws.amazon.com/eks/pricing/)

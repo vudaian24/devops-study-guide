@@ -45,7 +45,7 @@ Callout (cú pháp alert của GitHub, nên file `.md` xem trên GitHub cũng đ
 
 | Viết | Dùng cho |
 |---|---|
-| `> [!IMPORTANT]` | **Chỉ** dùng cho chỗ đã sửa so với bài gốc — hiện là "Cập nhật so với bản gốc". Nói rõ bản gốc làm gì, giờ làm gì, vì sao. Trang đếm số khung này. |
+| `> [!IMPORTANT]` | Quan trọng — điều dễ làm sai mà người học phải nhớ |
 | `> [!NOTE]` | Ghi chú thêm |
 | `> [!TIP]` | Mẹo |
 | `> [!WARNING]` | Cẩn thận (bẫy, lỗi hay gặp) |
@@ -56,5 +56,5 @@ Không hỗ trợ HTML thô và danh sách lồng nhau — mọi chữ đều đ
 ## Bản quyền
 
 Series `k8s-co-ban` phỏng theo series *Kubernetes cơ bản* của tác giả Hữu Giang trên DevOps VietNam
-(<https://devops.vn/series/kubernetes-co-ban-mrzero/>). Nội dung đã được viết lại và rà soát; mỗi bài
+(<https://devops.vn/series/kubernetes-co-ban-mrzero/>). Nội dung đã được viết lại và cập nhật theo công cụ, thực hành hiện tại; mỗi bài
 dẫn link về bài gốc.

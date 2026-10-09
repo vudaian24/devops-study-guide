@@ -1,34 +1,54 @@
 ---
-ten: Service, Ingress và Gateway API
+ten: Service và Ingress — quản lý truy cập ứng dụng
 goc: https://devops.vn/posts/kubernetes-service-ingress-quan-ly-truy-cap/
 thoiGian: 35 phút
-chip: Service, EndpointSlice, Ingress, Gateway API, minikube tunnel
+chip: Service, ClusterIP, DNS, Ingress, ingressClassName, minikube tunnel, Gateway API
 bank: Kubernetes, Networking
 ---
 
-Pod sinh ra rồi mất đi liên tục, IP của chúng đổi theo. **Service** cho một nhóm Pod một địa chỉ ổn định (IP ảo + tên DNS) và chia tải giữa chúng. **Ingress** (và người kế nhiệm là **Gateway API**) đưa traffic HTTP từ bên ngoài vào Service theo tên miền và đường dẫn.
+**Service** cung cấp một địa chỉ cố định (IP ảo + tên DNS) để kết nối tới một nhóm Pod và chia đều request cho chúng — dù Pod có bị tạo lại và đổi IP bao nhiêu lần. **Ingress** đưa traffic HTTP/HTTPS từ bên ngoài cluster vào đúng Service dựa theo tên miền và đường dẫn. Ở bài 2 bạn truy cập bằng port-forward; bài này làm đúng cách: Service để kết nối ổn định, Ingress để truy cập qua tên miền.
 
 ```text
-Client ──► Ingress / Gateway (theo host, path) ──► Service (IP ảo ổn định) ──► Pod, Pod, Pod
+Trình duyệt ──► Ingress (nginx.local) ──► Service nginx-service ──► Pod, Pod
 ```
 
-## Chuẩn bị
+Sau bài này bạn sẽ:
+
+- Tạo Service và gọi được ứng dụng bằng tên DNS bên trong cluster.
+- Bật Ingress controller, tạo Ingress và truy cập ứng dụng qua tên miền `nginx.local`.
+- Biết cách debug khi Service / Ingress không trả về gì.
+
+## Bước 1: Khởi động cluster và tạo Deployment
 
 ```bash
 minikube start
-kubectl config set-context --current --namespace=hoc-k8s
-kubectl apply -f nginx-deployment.yaml          # file từ bài 2
 ```
 
-## Bước 1: Tạo Service
+Dùng lại file `nginx-deployment.yaml` từ bài 2 (Deployment Nginx có nhãn `app: nginx`, cổng tên `http`), đổi `replicas` thành `2` cho nhẹ:
 
-Các loại Service:
+```bash
+kubectl apply -f nginx-deployment.yaml
+kubectl rollout status deployment/nginx-deployment
+kubectl get pods -l app=nginx -o wide
+```
 
-| Loại | Truy cập từ | Dùng khi |
+```text
+NAME                                READY   STATUS    RESTARTS   AGE   IP
+nginx-deployment-6b7f9c8d5c-2xk8p   1/1     Running   0          15s   10.244.0.7
+nginx-deployment-6b7f9c8d5c-9qv4m   1/1     Running   0          15s   10.244.0.8
+```
+
+Để ý cột `IP`: mỗi Pod một IP và IP này **đổi** mỗi khi Pod được tạo lại. Vì vậy không thể gọi ứng dụng bằng IP Pod — cần Service.
+
+## Bước 2: Tạo Service để kết nối tới Pod
+
+Kubernetes có ba loại Service hay dùng:
+
+| Loại | Truy cập được từ | Dùng khi |
 |---|---|---|
-| `ClusterIP` (mặc định) | Chỉ trong cluster | Service nội bộ; đứng sau Ingress / Gateway |
-| `NodePort` | `IP-node:30000–32767` | Lab, hoặc có load balancer riêng phía trước |
-| `LoadBalancer` | IP / DNS do cloud cấp | Cần một load balancer riêng cho Service (bài 5) |
+| `ClusterIP` (mặc định) | Chỉ bên trong cluster | Kết nối giữa các service nội bộ; đứng sau Ingress |
+| `NodePort` | `IP-của-node:30000–32767` | Thử nghiệm, hoặc đã có load balancer riêng phía trước |
+| `LoadBalancer` | IP / tên miền do cloud cấp | Mở thẳng một service ra Internet trên cloud (bài 5) |
 
 Tạo file `nginx-service.yaml`:
 
@@ -40,15 +60,21 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: nginx            # chọn mọi Pod có label app=nginx
+    app: nginx
   ports:
     - name: http
-      port: 80            # cổng của Service
-      targetPort: http    # tên cổng khai báo trong container (bài 2)
+      protocol: TCP
+      port: 80
+      targetPort: http
 ```
 
-> [!IMPORTANT]
-> Bản gốc dùng `targetPort: 80`. Trỏ theo **tên cổng** (`http`) thì sau này đổi cổng container (ví dụ sang 8080 khi chạy non-root) chỉ cần sửa Deployment, Service không phải sửa theo.
+| Trường | Ý nghĩa |
+|---|---|
+| `selector: app: nginx` | Service gửi traffic tới mọi Pod có nhãn này — Pod mới sinh ra cũng tự được thêm vào |
+| `port: 80` | Cổng của Service (người gọi dùng cổng này) |
+| `targetPort: http` | Cổng trên Pod, gọi theo **tên** đã đặt trong Deployment. Sau này đổi số cổng container thì Service không phải sửa |
+
+Triển khai và kiểm tra:
 
 ```bash
 kubectl apply -f nginx-service.yaml
@@ -56,23 +82,35 @@ kubectl get service nginx-service
 kubectl get endpointslices -l kubernetes.io/service-name=nginx-service
 ```
 
-EndpointSlice liệt kê IP các Pod mà Service đang trỏ tới. Danh sách rỗng gần như luôn có nghĩa là `selector` không khớp label của Pod, hoặc Pod chưa qua readiness probe.
+```text
+service/nginx-service created
 
-> [!IMPORTANT]
-> Tài liệu cũ dùng `kubectl get endpoints`. API `Endpoints` đã bị deprecate từ Kubernetes 1.33 và lệnh này giờ in cảnh báo — dùng `endpointslices` thay thế.
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+nginx-service   ClusterIP   10.96.142.17    <none>        80/TCP    5s
 
-Gọi thử từ một Pod tạm trong cluster:
+NAME                  ADDRESSTYPE   PORTS   ENDPOINTS               AGE
+nginx-service-x7k2p   IPv4          80      10.244.0.7,10.244.0.8   5s
+```
+
+**EndpointSlice** liệt kê IP các Pod mà Service đang trỏ tới — ở đây đúng là 2 IP của 2 Pod. Nếu cột `ENDPOINTS` trống, gần như chắc chắn `selector` không khớp nhãn Pod, hoặc Pod chưa qua readiness probe.
+
+Gọi thử Service từ một Pod tạm bên trong cluster:
 
 ```bash
 kubectl run curl --rm -it --restart=Never --image=curlimages/curl:8.10.1 -- \
   curl -s http://nginx-service
 ```
 
-Trong cùng namespace gọi bằng `nginx-service` là đủ; từ namespace khác dùng tên đầy đủ `nginx-service.hoc-k8s.svc.cluster.local`.
+Kết quả là HTML của trang *Welcome to nginx!*, sau đó Pod tạm tự xoá. Trong cùng namespace, gọi bằng tên `nginx-service` là đủ; từ namespace khác dùng tên đầy đủ `nginx-service.default.svc.cluster.local`.
 
-## Bước 2: Bật Ingress controller
+## Bước 3: Cấu hình Ingress để truy cập từ bên ngoài
 
-Đối tượng Ingress chỉ là *luật*; cần một **Ingress controller** đọc luật đó và thực sự nhận traffic. Minikube có sẵn addon:
+Ingress gồm hai phần:
+
+- **Ingress controller**: phần mềm (thường là một reverse proxy) thật sự nhận traffic. Không có controller thì Ingress không làm gì cả.
+- **Đối tượng Ingress**: các luật định tuyến — host nào, đường dẫn nào đi tới Service nào.
+
+Bật Ingress controller có sẵn của Minikube và đợi nó sẵn sàng:
 
 ```bash
 minikube addons enable ingress
@@ -80,7 +118,10 @@ kubectl wait -n ingress-nginx --for=condition=Ready pod \
   -l app.kubernetes.io/component=controller --timeout=180s
 ```
 
-## Bước 3: Tạo Ingress
+```text
+🌟  The 'ingress' addon is enabled
+pod/ingress-nginx-controller-xxxxxxxxx-xxxxx condition met
+```
 
 Tạo file `nginx-ingress.yaml`:
 
@@ -90,7 +131,7 @@ kind: Ingress
 metadata:
   name: nginx-ingress
 spec:
-  ingressClassName: nginx        # controller nào xử lý Ingress này
+  ingressClassName: nginx
   rules:
     - host: nginx.local
       http:
@@ -104,25 +145,36 @@ spec:
                   name: http
 ```
 
+| Trường | Ý nghĩa |
+|---|---|
+| `ingressClassName: nginx` | Chỉ định controller nào xử lý Ingress này. Cluster thật thường có nhiều controller nên luôn ghi rõ |
+| `host: nginx.local` | Chỉ áp dụng cho request có tên miền này |
+| `path: /` + `pathType: Prefix` | Mọi đường dẫn bắt đầu bằng `/` (tức là tất cả) |
+| `backend.service` | Gửi tới Service `nginx-service`, cổng tên `http` |
+
 ```bash
 kubectl apply -f nginx-ingress.yaml
 kubectl get ingress nginx-ingress
 ```
 
-> [!IMPORTANT]
-> Bản gốc thiếu `ingressClassName`. Cluster chỉ có một controller được đánh dấu *default* thì vẫn chạy, nhưng cluster thật thường có nhiều controller (nội bộ / public) hoặc không có default — khi đó Ingress bị bỏ qua mà không báo lỗi. Annotation cũ `kubernetes.io/ingress.class` đã bị thay bằng trường này.
+```text
+NAME            CLASS   HOSTS         ADDRESS        PORTS   AGE
+nginx-ingress   nginx   nginx.local   192.168.49.2   80      30s
+```
 
-## Bước 4: Truy cập từ máy của bạn
+Đợi tới khi cột `ADDRESS` có giá trị (khoảng 30 giây).
 
-Cách làm khác nhau theo hệ điều hành, vì với driver Docker trên macOS/Windows, IP của node Minikube nằm trong mạng ảo của Docker Desktop và **máy host không tới được**.
+## Bước 4: Truy cập ứng dụng qua tên miền
 
-Linux:
+Cách truy cập khác nhau theo hệ điều hành, vì trên macOS / Windows (Docker Desktop) máy bạn **không đi thẳng** được tới IP của node Minikube.
+
+**Linux:**
 
 ```bash
 curl -H "Host: nginx.local" http://$(minikube ip)/
 ```
 
-macOS / Windows — mở terminal riêng và để chạy suốt (sẽ hỏi mật khẩu sudo để mở cổng 80/443):
+**macOS / Windows:** mở một terminal riêng và để lệnh này chạy suốt (sẽ hỏi mật khẩu để mở cổng 80/443):
 
 ```bash
 minikube tunnel
@@ -134,101 +186,63 @@ Rồi ở terminal khác:
 curl -H "Host: nginx.local" http://127.0.0.1/
 ```
 
-Muốn mở bằng trình duyệt tại `http://nginx.local`, thêm một dòng vào `/etc/hosts` (Windows: `C:\Windows\System32\drivers\etc\hosts`): dùng IP của `minikube ip` trên Linux, `127.0.0.1` trên macOS/Windows.
+Cả hai trường hợp đều trả về HTML của trang Nginx. Tham số `-H "Host: nginx.local"` giả lập việc truy cập bằng tên miền mà không cần sửa file hệ thống.
 
-> [!IMPORTANT]
-> Bản gốc dùng `minikube ip` + `/etc/hosts` cho mọi máy — trên macOS/Windows với driver Docker cách này treo vì không tới được IP đó; phải dùng `minikube tunnel`. Bản này cũng ưu tiên `curl -H "Host: …"`, kiểm tra được ngay mà không cần sửa file hệ thống.
+Muốn mở bằng trình duyệt tại `http://nginx.local`, thêm một dòng vào file hosts (`/etc/hosts` trên Linux/macOS, `C:\Windows\System32\drivers\etc\hosts` trên Windows — cần quyền admin):
 
-## Bước 5: Ingress hay Gateway API?
-
-> [!IMPORTANT]
-> Bản gốc khuyên dùng NGINX Ingress cho production. Tháng 11/2025, Kubernetes thông báo **dừng phát triển dự án Ingress-NGINX** (chỉ bảo trì tối thiểu tới 3/2026, sau đó không còn bản vá bảo mật). API `Ingress` vẫn là API ổn định và còn nhiều controller khác hỗ trợ, nhưng hướng đi của cộng đồng là **Gateway API**. Học Ingress để đọc được hệ thống hiện có; dự án mới nên chọn Gateway API.
-
-| | Ingress | Gateway API |
-|---|---|---|
-| Mô hình | Một đối tượng gộp mọi thứ | Tách vai: `GatewayClass` (hạ tầng), `Gateway` (cổng vào), `HTTPRoute` (luật của từng app) |
-| Tính năng nâng cao | Qua annotation, mỗi controller một kiểu | Có sẵn trong spec: chia traffic theo trọng số, header, redirect, rewrite… |
-| Ngoài HTTP | Không | TCP, UDP, TLS, gRPC |
-
-### Thử Gateway API (làm sau bài 6)
-
-Phần này cài controller bằng Helm. Nếu chưa học bài 6, quay lại sau.
-
-```bash
-minikube addons disable ingress          # tránh tranh cổng 80 với Envoy
-
-# Envoy Gateway — một controller Gateway API; thêm --version vX.Y.Z để pin
-helm install eg oci://docker.io/envoyproxy/gateway-helm \
-  -n envoy-gateway-system --create-namespace
-kubectl wait -n envoy-gateway-system deployment/envoy-gateway \
-  --for=condition=Available --timeout=5m
+```text
+192.168.49.2  nginx.local      # Linux: thay bằng kết quả của lệnh minikube ip
+127.0.0.1     nginx.local      # macOS / Windows (khi minikube tunnel đang chạy)
 ```
 
-Tạo file `nginx-gateway.yaml`:
+## Bước 5: Xoá tài nguyên để dọn dẹp
+
+```bash
+kubectl delete -f nginx-ingress.yaml -f nginx-service.yaml
+kubectl delete -f nginx-deployment.yaml
+minikube stop
+```
+
+```text
+ingress.networking.k8s.io "nginx-ingress" deleted
+service "nginx-service" deleted
+deployment.apps "nginx-deployment" deleted
+```
+
+Nếu đã sửa file hosts, xoá dòng `nginx.local` đi. Giữ lại các file YAML — bài 5 và bài 8 dùng lại `nginx-deployment.yaml`.
+
+## Xử lý sự cố thường gặp
+
+| Hiện tượng | Nguyên nhân | Cách xử lý |
+|---|---|---|
+| `ENDPOINTS` của Service trống | `selector` không khớp nhãn Pod, hoặc Pod chưa Ready | So `kubectl get pods --show-labels` với `selector`; xem readiness probe |
+| Ingress không có `ADDRESS` | Controller chưa chạy, hoặc thiếu / sai `ingressClassName` | `kubectl get pods -n ingress-nginx`; `kubectl get ingressclass` để xem tên class đúng |
+| `curl` tới `minikube ip` bị treo (macOS / Windows) | Máy host không tới được mạng của Docker Desktop | Dùng `minikube tunnel` và gọi `127.0.0.1` |
+| Trả về `404 Not Found` của nginx | Request không khớp `host` của Ingress | Thêm `-H "Host: nginx.local"` hoặc sửa file hosts |
+| Trả về `503 Service Temporarily Unavailable` | Service không có Pod nào sẵn sàng phía sau | Kiểm tra EndpointSlice và trạng thái Pod |
+
+## Lưu ý quan trọng
+
+- **Ingress controller trong production**: Minikube có sẵn controller; cluster thật phải tự cài (hoặc dùng controller của cloud, ví dụ AWS Load Balancer Controller tạo ALB). Chọn controller còn được phát triển tích cực — dự án **Ingress-NGINX** của Kubernetes đã dừng phát triển từ 3/2026, các controller khác như Traefik, HAProxy, Envoy vẫn hỗ trợ Ingress.
+- **Gateway API** là thế hệ kế tiếp của Ingress, đã ổn định và được khuyến nghị cho dự án mới. Nó tách vai rõ ràng: `GatewayClass` (loại hạ tầng), `Gateway` (cổng vào), `HTTPRoute` (luật của từng ứng dụng), và có sẵn các tính năng mà Ingress phải dùng annotation: chia traffic theo tỉ lệ, theo header, chuyển hướng, viết lại URL. Ví dụ `HTTPRoute` tương đương Ingress ở trên:
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: web-gw
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: nginx
 spec:
   parentRefs:
-    - name: web-gw
+    - name: web-gw            # Gateway do đội hạ tầng tạo sẵn
   hostnames:
     - nginx.local
   rules:
     - matches:
-        - path:
-            type: PathPrefix
-            value: /
+        - path: { type: PathPrefix, value: / }
       backendRefs:
         - name: nginx-service
           port: 80
 ```
 
-```bash
-kubectl apply -f nginx-gateway.yaml
-kubectl get gateway web-gw            # đợi cột PROGRAMMED = True và có ADDRESS
-```
-
-Với `minikube tunnel` đang chạy, gọi tới địa chỉ ở cột `ADDRESS`:
-
-```bash
-curl -H "Host: nginx.local" http://$(kubectl get gateway web-gw -o jsonpath='{.status.addresses[0].value}')/
-```
-
-## Dọn dẹp
-
-```bash
-kubectl delete -f nginx-gateway.yaml --ignore-not-found
-kubectl delete -f nginx-ingress.yaml -f nginx-service.yaml --ignore-not-found
-helm uninstall eg -n envoy-gateway-system 2>/dev/null || true
-```
-
-Giữ lại file `nginx-deployment.yaml` — bài 5 và bài 8 dùng lại.
-
-## Tóm tắt
-
-- Service = IP ảo + DNS ổn định trước một nhóm Pod, chọn bằng label. Không nhận traffic → kiểm tra EndpointSlice trước tiên.
-- Ingress / Gateway = luật định tuyến HTTP từ ngoài vào Service; luôn cần một controller chạy thật.
-- Dự án mới: Gateway API. Hệ thống cũ: Ingress, nhớ đặt `ingressClassName`.
-
-Tài liệu: [Service](https://kubernetes.io/docs/concepts/services-networking/service/) · [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) · [Gateway API](https://gateway-api.sigs.k8s.io/) · [Envoy Gateway quickstart](https://gateway.envoyproxy.io/docs/tasks/quickstart/)
+- **Tên miền**: `nginx.local` chỉ dùng được trên máy bạn. Môi trường thật cần bản ghi DNS trỏ về địa chỉ của Ingress / load balancer, và chứng chỉ TLS (thường cấp tự động bằng cert-manager).
+- Tài liệu: [Service](https://kubernetes.io/docs/concepts/services-networking/service/) · [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) · [Gateway API](https://gateway-api.sigs.k8s.io/)

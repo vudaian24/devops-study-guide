@@ -113,22 +113,18 @@ function veBai(n) {
   const B = mdLesson(b.md);
   cur = n; TD.last = n; save();
 
-  /* Đoạn đầu tiên làm lời dẫn; phần còn lại của phần mở đầu vào khung "bài gốc" */
+  /* Đoạn đầu tiên làm lời dẫn; phần còn lại của phần mở đầu (mục tiêu bài) vào khung "Nguồn và mục tiêu" */
   const coLead = B.moDau[0] && B.moDau[0].t === "p";
   const lead = coLead ? B.moDau[0].inner : "";
   const moDau = (coLead ? B.moDau.slice(1) : B.moDau).map(x => x.html).join("");
   const chips = (b.chip || "").split(",").map(s => s.trim()).filter(Boolean);
-  const soCapNhat = (b.md.match(/^> \[!IMPORTANT\]/gm) || []).length;
 
   const nguon = `<section class="kb-sec" id="nguon"><div class="panel cv-box">
-      <h2 class="section-title">Bài gốc và phạm vi rà soát</h2>
+      <h2 class="section-title">Nguồn và mục tiêu bài học</h2>
       <ul class="cv-list">
         <li><span class="cv-src">${esc(SE.noiDang)} · ${esc(SE.tacGia)}</span>
-          <p class="md-p">${b.goc ? `<a href="${esc(b.goc)}" target="_blank" rel="noopener">Bài ${n} trong series “${esc(SE.ten)}”</a>` : esc(SE.ten)}
-          — nội dung được viết lại và kiểm tra lại, không phải bản sao.</p></li>
-        <li><span class="cv-src">Rà soát ${esc(SE.raSoat || "")}</span>
-          <p class="md-p">${soCapNhat} chỗ thay đổi so với bản gốc, đánh dấu bằng khung
-          <span class="md-upd-chip">↻ Cập nhật so với bản gốc</span> — mỗi khung nói rõ bản gốc làm gì và vì sao đổi.</p></li>
+          <p class="md-p">Phỏng theo ${b.goc ? `<a href="${esc(b.goc)}" target="_blank" rel="noopener">bài ${n} trong series “${esc(SE.ten)}”</a>` : esc(SE.ten)},
+          cập nhật theo công cụ và thực hành hiện tại${SE.raSoat ? ` (${esc(SE.raSoat)})` : ""}.</p></li>
       </ul>
       ${moDau ? `<div class="md-body md-intro">${moDau}</div>` : ""}
     </div></section>`;
@@ -138,7 +134,7 @@ function veBai(n) {
       <div class="panel md-body">${m.html}</div>
     </section>`).join("");
 
-  const mucLuc = [`<a class="side-link" href="#bai-${n}/nguon">Bài gốc &amp; rà soát</a>`]
+  const mucLuc = [`<a class="side-link" href="#bai-${n}/nguon">Nguồn &amp; mục tiêu</a>`]
     .concat(B.muc.map((m, k) => `<a class="side-link" href="#bai-${n}/${m.id}"><span class="side-no">${so2(k + 1)}</span>${esc(m.ten)}</a>`))
     .concat(b.bank ? [`<a class="side-link" href="#bai-${n}/luyen">Luyện câu hỏi</a>`] : [])
     .join("");

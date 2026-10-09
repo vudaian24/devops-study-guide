@@ -1,47 +1,65 @@
 ---
-ten: Cài Minikube và chạy Pod đầu tiên
+ten: Cài đặt Minikube và chạy Pod đầu tiên
 goc: https://devops.vn/posts/kubernetes-co-ban-cai-dat-minikube/
 thoiGian: 25 phút
-chip: Minikube, kubectl, Pod, Namespace
+chip: Kubernetes, Minikube, kubectl, Pod
 bank: Kubernetes
 ---
 
-Kubernetes (K8s) là nền tảng điều phối container. Bạn **khai báo trạng thái mong muốn** (chạy image nào, mấy bản, mở cổng nào), còn Kubernetes liên tục đưa cluster về đúng trạng thái đó. Bài này dựng một cluster chạy ngay trên máy bằng **Minikube** rồi chạy Pod đầu tiên.
+Kubernetes (K8s) là nền tảng mã nguồn mở dùng để quản lý ứng dụng chạy trong container: tự động triển khai, mở rộng và giữ cho ứng dụng luôn chạy. Bài đầu tiên này hướng dẫn cài **Minikube** — công cụ dựng một cluster Kubernetes ngay trên máy cá nhân — và chạy **Pod** đầu tiên để thấy Kubernetes hoạt động như thế nào.
 
 Sau bài này bạn sẽ:
 
-- Có cluster Minikube và `kubectl` hoạt động.
-- Hiểu Pod là gì, tạo Pod bằng YAML, đọc trạng thái, log và sự kiện của nó.
-- Có namespace `hoc-k8s` dùng chung cho cả series.
+- Có một cluster Kubernetes chạy trên máy và dùng được lệnh `kubectl`.
+- Hiểu Pod là gì, viết được file YAML tạo Pod.
+- Biết xem trạng thái, log, chi tiết của Pod và dọn dẹp sau khi thử.
+
+## Kubernetes là gì?
+
+Bạn không ra lệnh "chạy container này trên máy kia". Bạn **khai báo trạng thái mong muốn** — ví dụ "luôn có 3 bản Nginx chạy" — và Kubernetes liên tục so sánh trạng thái thật với mong muốn để tự sửa: container chết thì chạy lại, máy hỏng thì dời sang máy khác.
+
+Một cluster gồm hai phần:
+
+| Thành phần | Vai trò |
+|---|---|
+| **Control plane** | "Bộ não": API server (nơi `kubectl` gửi lệnh tới), etcd (lưu trạng thái), scheduler (chọn node cho Pod), controller manager (liên tục sửa cho đúng trạng thái mong muốn) |
+| **Node** (worker) | Máy chạy ứng dụng: kubelet nhận việc từ control plane và chạy container qua container runtime |
+
+Minikube gói cả hai phần vào **một node** chạy trong Docker trên máy bạn — đủ để học mọi khái niệm cơ bản.
 
 ## Chuẩn bị
 
-| Thành phần | Tối thiểu | Khuyến nghị cho cả series |
-|---|---|---|
-| CPU | 2 | 4 |
-| RAM trống | 2 GB | 4–6 GB |
-| Docker | Docker Engine hoặc Docker Desktop đang chạy | |
-| Hệ điều hành | Linux, macOS, Windows (WSL2) | |
+| Thành phần | Yêu cầu |
+|---|---|
+| CPU / RAM | Tối thiểu 2 CPU, 2 GB RAM trống. Nên có 4 CPU, 6 GB để làm trọn series (bài 8 cài Prometheus + Grafana) |
+| Docker | Docker Engine (Linux) hoặc Docker Desktop (macOS, Windows) **đang chạy** |
+| Hệ điều hành | Linux, macOS hoặc Windows (dùng PowerShell hoặc WSL2) |
 
-> [!IMPORTANT]
-> Bản gốc chỉ hướng dẫn Ubuntu 22.04. Bản này thêm macOS và Windows, đồng thời nâng mức RAM khuyến nghị vì bài 8 cài `kube-prometheus-stack`, nặng hơn nhiều so với các bài đầu.
+Kiểm tra Docker đang chạy:
 
-## Bước 1: Cài kubectl và Minikube
+```bash
+docker version
+```
 
-`kubectl` là CLI nói chuyện với API server của Kubernetes; Minikube là công cụ dựng cluster. Cần cả hai.
+Thấy cả hai phần `Client` và `Server` là được. Nếu chỉ có `Client` kèm lỗi *Cannot connect to the Docker daemon*, hãy mở Docker Desktop (hoặc `sudo systemctl start docker` trên Linux) rồi thử lại.
 
-macOS (Homebrew):
+## Bước 1: Cài đặt kubectl và Minikube
+
+- **kubectl**: công cụ dòng lệnh để làm việc với mọi cluster Kubernetes (Minikube, EKS, GKE…).
+- **Minikube**: công cụ dựng cluster trên máy cá nhân.
+
+**macOS** (cần [Homebrew](https://brew.sh/)):
 
 ```bash
 brew install kubectl minikube
 ```
 
-Linux (tự nhận kiến trúc amd64 / arm64):
+**Linux** — đoạn lệnh tự nhận kiến trúc máy (amd64 hoặc arm64):
 
 ```bash
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 
-# kubectl — bản stable mới nhất
+# kubectl — bản ổn định mới nhất
 curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
 sudo install -m 0755 kubectl /usr/local/bin/kubectl
 
@@ -50,36 +68,47 @@ curl -LO "https://storage.googleapis.com/minikube/releases/latest/minikube-linux
 sudo install minikube-linux-${ARCH} /usr/local/bin/minikube
 ```
 
-Windows (PowerShell):
+**Windows** (PowerShell):
 
 ```powershell
 winget install Kubernetes.kubectl
 winget install Kubernetes.minikube
 ```
 
-Kiểm tra:
+Mở terminal mới rồi kiểm tra:
 
 ```bash
 kubectl version --client
 minikube version
 ```
 
-> [!IMPORTANT]
-> Bản gốc chỉ cài Minikube nên `kubectl` ở các bước sau sẽ báo *command not found* trên máy chưa có sẵn. Bản gốc cũng cài cứng file `amd64`, không chạy được trên máy ARM (Apple Silicon, Graviton).
+Kết quả (số phiên bản trên máy bạn có thể khác):
 
-> [!IMPORTANT]
-> Bản gốc in sẵn kết quả `minikube v1.33.1` và Kubernetes `v1.29.0` — các phiên bản này đã hết hạn hỗ trợ. Số bạn thấy sẽ khác, và điều đó không sao. Quy tắc cần nhớ: `kubectl` chỉ được lệch cluster **tối đa một minor version** (kubectl 1.N dùng được với cluster 1.N−1 đến 1.N+1).
+```text
+Client Version: v1.xx.x
+Kustomize Version: v5.x.x
+minikube version: v1.xx.x
+```
 
 > [!WARNING]
-> Trên Linux, Minikube từ chối chạy driver Docker bằng `root`. Thêm user vào nhóm `docker` rồi đăng nhập lại: `sudo usermod -aG docker $USER && newgrp docker`.
+> Trên Linux, Minikube không cho chạy driver Docker bằng user `root`. Hãy dùng user thường và thêm user vào nhóm `docker`: `sudo usermod -aG docker $USER && newgrp docker`.
 
-## Bước 2: Khởi động cluster
+## Bước 2: Khởi động cluster Minikube
 
 ```bash
 minikube start --driver=docker --cpus=4 --memory=6g
 ```
 
-Máy yếu thì dùng `--cpus=2 --memory=4g`; chỉ bài 8 mới cần nhiều tài nguyên. Kiểm tra:
+- `--driver=docker`: chạy node Kubernetes bên trong một container Docker.
+- `--cpus`, `--memory`: tài nguyên cấp cho cluster. Máy yếu thì dùng `--cpus=2 --memory=4g` (chỉ bài 8 cần nhiều hơn).
+
+Lần đầu mất vài phút để tải image. Kết quả cuối cùng:
+
+```text
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+```
+
+Dòng `Done!` cho biết cluster đã chạy **và** `kubectl` đã được trỏ sẵn vào cluster này. Kiểm tra:
 
 ```bash
 minikube status
@@ -87,35 +116,33 @@ kubectl get nodes
 ```
 
 ```text
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
 NAME       STATUS   ROLES           AGE   VERSION
 minikube   Ready    control-plane   1m    v1.xx.x
 ```
 
-`minikube start` cũng tự trỏ `kubectl` vào cluster này (context `minikube`). Xem context hiện tại bằng `kubectl config current-context`.
-
-> [!IMPORTANT]
-> Bản gốc kết thúc **mỗi bài** bằng `minikube delete` rồi bài sau tạo lại từ đầu — mất vài phút mỗi lần và phải kéo lại toàn bộ image. Bản này giữ một cluster cho cả series: dùng `minikube stop` để tạm dừng (giữ nguyên mọi thứ), `minikube start` để chạy tiếp. Chỉ `minikube delete` khi muốn làm lại từ đầu.
-
-## Bước 3: Tạo namespace cho series
-
-Namespace chia một cluster thành nhiều "phòng" logic. Cả series dùng namespace `hoc-k8s` thay vì `default`, nên dọn dẹp chỉ cần xoá một namespace.
+Node ở trạng thái `Ready` là cluster sẵn sàng. Muốn xem các thành phần hệ thống đang chạy dưới dạng Pod:
 
 ```bash
-kubectl create namespace hoc-k8s
-kubectl config set-context --current --namespace=hoc-k8s
-
-# Kiểm tra namespace mặc định của context hiện tại
-kubectl config view --minify -o jsonpath='{..namespace}'; echo
+kubectl get pods -n kube-system
 ```
 
-> [!IMPORTANT]
-> Bản gốc tạo mọi thứ trong `default`. Thói quen dùng namespace riêng ngay từ đầu giúp bạn quen với cách cluster thật được tổ chức (mỗi team / môi trường một namespace, phân quyền RBAC theo namespace).
+Bạn sẽ thấy `etcd`, `kube-apiserver`, `kube-scheduler`, `coredns`… — chính là các thành phần của control plane ở bảng phía trên.
 
-## Bước 4: Tạo Pod đầu tiên
+> [!TIP]
+> Không cần xoá cluster sau mỗi bài. `minikube stop` tạm dừng và giữ nguyên mọi thứ; bài sau chỉ cần `minikube start` là chạy tiếp, nhanh hơn nhiều so với tạo lại từ đầu.
 
-**Pod** là đơn vị nhỏ nhất Kubernetes triển khai: một hoặc vài container dùng chung network (chung IP, gọi nhau qua `localhost`) và có thể dùng chung volume. Thực tế hiếm khi tạo Pod trực tiếp — bài 2 sẽ dùng Deployment — nhưng hiểu Pod trước giúp đọc được mọi thứ còn lại.
+## Bước 3: Tạo Pod đầu tiên và kiểm tra
 
-Tạo file `nginx-pod.yaml`:
+**Pod** là đơn vị nhỏ nhất mà Kubernetes triển khai. Một Pod chứa một (thường gặp nhất) hoặc vài container dùng chung địa chỉ IP và có thể dùng chung ổ đĩa.
+
+Tạo file `nginx-pod.yaml` với nội dung:
 
 ```yaml
 apiVersion: v1
@@ -127,18 +154,26 @@ metadata:
 spec:
   containers:
     - name: nginx
-      image: nginx:1.28          # pin phiên bản cụ thể, không dùng latest
+      image: nginx:1.28
       ports:
         - containerPort: 80
 ```
 
-> [!IMPORTANT]
-> `nginx:latest` → `nginx:1.28`. Tag `latest` là tag trôi: hôm nay và tháng sau có thể là hai image khác nhau, và với `latest` Kubernetes mặc định `imagePullPolicy: Always` nên mỗi lần Pod khởi động lại có thể chạy một bản khác. Bản này cũng thêm `labels` — từ bài 2 trở đi, Deployment và Service đều chọn Pod bằng label.
+Ý nghĩa từng phần:
+
+| Trường | Ý nghĩa |
+|---|---|
+| `apiVersion: v1`, `kind: Pod` | Loại tài nguyên muốn tạo. Mọi file YAML của Kubernetes đều bắt đầu bằng hai dòng này |
+| `metadata.name` | Tên Pod, không trùng trong cùng namespace |
+| `metadata.labels` | Nhãn dạng `key: value`. Bài 2, 3 dùng nhãn để Deployment và Service tìm đúng Pod |
+| `spec.containers` | Danh sách container trong Pod |
+| `image: nginx:1.28` | Image chạy container. Luôn ghi **phiên bản cụ thể** thay vì `latest`, để lần nào chạy cũng ra đúng một bản |
+| `containerPort: 80` | Cổng ứng dụng lắng nghe bên trong container (mang tính mô tả) |
 
 > [!TIP]
-> Không cần gõ YAML từ đầu. Sinh bộ khung rồi sửa: `kubectl run nginx-pod --image=nginx:1.28 --port=80 --dry-run=client -o yaml > nginx-pod.yaml`
+> Không muốn gõ YAML từ đầu? Cho kubectl sinh khung rồi sửa lại: `kubectl run nginx-pod --image=nginx:1.28 --port=80 --dry-run=client -o yaml > nginx-pod.yaml`
 
-Triển khai và đợi Pod sẵn sàng:
+Triển khai Pod và đợi nó sẵn sàng:
 
 ```bash
 kubectl apply -f nginx-pod.yaml
@@ -147,59 +182,66 @@ kubectl get pods -o wide
 ```
 
 ```text
+pod/nginx-pod created
+pod/nginx-pod condition met
+
 NAME        READY   STATUS    RESTARTS   AGE   IP           NODE
 nginx-pod   1/1     Running   0          20s   10.244.0.5   minikube
 ```
 
-## Bước 5: Quan sát Pod
-
-Bốn lệnh bạn sẽ dùng hằng ngày:
+`READY 1/1` và `STATUS Running` nghĩa là container đã chạy. Giờ thử bốn lệnh bạn sẽ dùng hằng ngày:
 
 ```bash
-kubectl describe pod nginx-pod          # cấu hình + phần Events ở cuối
-kubectl logs nginx-pod                  # stdout/stderr của container
-kubectl exec -it nginx-pod -- nginx -v  # chạy lệnh bên trong container
+kubectl describe pod nginx-pod           # thông tin chi tiết, xem phần Events ở cuối
+kubectl logs nginx-pod                   # log của container
+kubectl exec -it nginx-pod -- nginx -v   # chạy một lệnh bên trong container
 kubectl port-forward pod/nginx-pod 8080:80
 ```
 
-Với `port-forward`, mở `http://localhost:8080` sẽ thấy trang *Welcome to nginx!*; nhấn `Ctrl+C` để dừng.
+Lệnh cuối chuyển cổng 8080 trên máy bạn vào cổng 80 của Pod. Mở trình duyệt tới `http://localhost:8080` sẽ thấy trang **Welcome to nginx!**. Nhấn `Ctrl+C` để dừng.
 
-Phần **Events** cuối `kubectl describe` là nơi đầu tiên cần nhìn khi Pod không chạy. Các trạng thái hay gặp:
+Phần **Events** ở cuối `kubectl describe` kể lại Pod đã trải qua những gì: được xếp lên node (`Scheduled`), kéo image (`Pulling`, `Pulled`), tạo và chạy container (`Created`, `Started`). Khi Pod không chạy, đây là chỗ đầu tiên cần xem.
 
-| Trạng thái | Nghĩa là | Nhìn vào đâu |
-|---|---|---|
-| `Pending` | Chưa được xếp lên node nào | Events: thiếu CPU/RAM, không node nào khớp |
-| `ContainerCreating` | Đang kéo image / gắn volume | Events |
-| `ImagePullBackOff` | Kéo image lỗi (sai tên, sai tag, thiếu quyền registry) | Events |
-| `CrashLoopBackOff` | Container khởi động rồi chết, lặp lại | `kubectl logs --previous` |
-| `Running` | Container đang chạy (chưa chắc đã *sẵn sàng* nhận request) | Cột `READY` |
-
-Thử xoá Pod và xem điều gì xảy ra:
+Cuối cùng, thử xoá Pod:
 
 ```bash
 kubectl delete pod nginx-pod
 kubectl get pods
 ```
 
-Pod biến mất và **không ai tạo lại** — vì không có controller nào quản lý nó. Đó chính là lý do bài 2 dùng Deployment.
+Pod biến mất và **không được tạo lại** — vì không có thành phần nào "trông coi" Pod này. Đó là lý do trong thực tế ta không tạo Pod trực tiếp mà dùng **Deployment** ở bài 2.
 
-## Dọn dẹp
+## Bước 4: Xoá tài nguyên để dọn dẹp
 
 ```bash
 kubectl delete -f nginx-pod.yaml --ignore-not-found
-minikube stop        # tạm dừng; bài sau chỉ cần minikube start
+minikube stop
 ```
 
-## Tóm tắt lệnh
+`minikube stop` tạm dừng cluster, giữ lại dữ liệu cho bài sau. Khi học xong cả series, hoặc muốn làm lại từ đầu:
 
-| Lệnh | Dùng để |
-|---|---|
-| `minikube start` / `stop` / `delete` | Bật, tạm dừng, xoá hẳn cluster |
-| `kubectl config set-context --current --namespace=…` | Đổi namespace mặc định |
-| `kubectl apply -f file.yaml` | Tạo / cập nhật tài nguyên theo file |
-| `kubectl get pods -o wide` | Liệt kê Pod kèm IP, node |
-| `kubectl describe pod <tên>` | Chi tiết + Events |
-| `kubectl logs <tên>` | Xem log |
-| `kubectl exec -it <tên> -- <lệnh>` | Chạy lệnh trong container |
+```bash
+minikube delete
+```
 
-Tài liệu: [Minikube — Get Started](https://minikube.sigs.k8s.io/docs/start/) · [Kubernetes — Pods](https://kubernetes.io/docs/concepts/workloads/pods/)
+```text
+🔥  Deleting "minikube" in docker ...
+💀  Removed all traces of the "minikube" cluster.
+```
+
+## Xử lý sự cố thường gặp
+
+| Hiện tượng | Nguyên nhân | Cách xử lý |
+|---|---|---|
+| `minikube start` báo không tìm thấy driver docker | Docker chưa chạy | Mở Docker Desktop / `sudo systemctl start docker`, rồi chạy lại |
+| `The "docker" driver should not be used with root privileges` | Đang dùng user root trên Linux | Dùng user thường, thêm vào nhóm `docker` |
+| `kubectl` báo `connection refused` | Cluster đang dừng | `minikube start` |
+| Pod ở trạng thái `ImagePullBackOff` | Sai tên / tag image, hoặc mạng không tải được | `kubectl describe pod <tên>` xem Events, sửa image rồi `kubectl apply` lại |
+| Pod mãi ở `Pending` | Cluster thiếu CPU / RAM | Xem Events; tạo lại cluster với `--cpus`, `--memory` lớn hơn |
+
+## Lưu ý quan trọng
+
+- **Phiên bản**: `kubectl` chỉ nên lệch cluster tối đa một phiên bản phụ (ví dụ kubectl 1.N dùng với cluster 1.N−1 đến 1.N+1).
+- **Tag image**: tránh `latest`. Ghi rõ phiên bản giúp mọi lần chạy cho cùng một kết quả và rollback được.
+- **Driver**: bài này dùng Docker. Minikube còn hỗ trợ các driver khác (Podman, VirtualBox, Hyper-V…); đổi bằng `--driver=<tên>`.
+- Tài liệu: [Minikube — Get Started](https://minikube.sigs.k8s.io/docs/start/) · [Kubernetes — Pods](https://kubernetes.io/docs/concepts/workloads/pods/) · [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)

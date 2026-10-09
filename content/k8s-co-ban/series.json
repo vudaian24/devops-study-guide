@@ -1,7 +1,7 @@
 {
   "ten": "Kubernetes cơ bản",
   "nhan": "K8s cơ bản",
-  "tomTat": "9 bài thực hành: từ Minikube trên máy cá nhân tới EKS, Helm, CI/CD, giám sát và autoscaling. Đã rà soát lại theo thực hành hiện tại.",
+  "tomTat": "9 bài thực hành: từ Minikube trên máy cá nhân tới EKS, Helm, CI/CD, giám sát và autoscaling. Cập nhật theo công cụ và thực hành hiện tại.",
   "tacGia": "Hữu Giang",
   "noiDang": "DevOps VietNam",
   "nguon": "https://devops.vn/series/kubernetes-co-ban-mrzero/",

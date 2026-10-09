@@ -12,11 +12,10 @@
    Mọi chữ đều được escape — Markdown không chèn được HTML thô.
    ============================================================ */
 
-/* IMPORTANT được dùng riêng cho "chỗ đã sửa so với bài gốc" — xem content/README.md */
 const MD_CALLOUT = {
   NOTE:      { cls: "md-note",    ico: "i", ten: "Ghi chú" },
   TIP:       { cls: "md-tip",     ico: "★", ten: "Mẹo" },
-  IMPORTANT: { cls: "md-upd",     ico: "↻", ten: "Cập nhật so với bản gốc" },
+  IMPORTANT: { cls: "md-imp",     ico: "!", ten: "Quan trọng" },
   WARNING:   { cls: "md-warn",    ico: "⚠", ten: "Cẩn thận" },
   CAUTION:   { cls: "md-caution", ico: "⚠", ten: "Nguy hiểm" }
 };
