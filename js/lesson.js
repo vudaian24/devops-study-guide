@@ -113,28 +113,23 @@ function veBai(n) {
   const B = mdLesson(b.md);
   cur = n; TD.last = n; save();
 
-  /* Đoạn đầu tiên làm lời dẫn; phần còn lại của phần mở đầu (mục tiêu bài) vào khung "Nguồn và mục tiêu" */
+  /* Đoạn đầu tiên làm lời dẫn; phần còn lại của phần mở đầu vào khung "Mục tiêu bài học" */
   const coLead = B.moDau[0] && B.moDau[0].t === "p";
   const lead = coLead ? B.moDau[0].inner : "";
   const moDau = (coLead ? B.moDau.slice(1) : B.moDau).map(x => x.html).join("");
   const chips = (b.chip || "").split(",").map(s => s.trim()).filter(Boolean);
 
-  const nguon = `<section class="kb-sec" id="nguon"><div class="panel cv-box">
-      <h2 class="section-title">Nguồn và mục tiêu bài học</h2>
-      <ul class="cv-list">
-        <li><span class="cv-src">${esc(SE.noiDang)} · ${esc(SE.tacGia)}</span>
-          <p class="md-p">Phỏng theo ${b.goc ? `<a href="${esc(b.goc)}" target="_blank" rel="noopener">bài ${n} trong series “${esc(SE.ten)}”</a>` : esc(SE.ten)},
-          cập nhật theo công cụ và thực hành hiện tại${SE.raSoat ? ` (${esc(SE.raSoat)})` : ""}.</p></li>
-      </ul>
-      ${moDau ? `<div class="md-body md-intro">${moDau}</div>` : ""}
-    </div></section>`;
+  const mucTieu = moDau ? `<section class="kb-sec" id="muc-tieu"><div class="panel cv-box">
+      <h2 class="section-title">Mục tiêu bài học</h2>
+      <div class="md-body md-intro">${moDau}</div>
+    </div></section>` : "";
 
   const muc = B.muc.map((m, k) => `<section class="kb-sec" id="${m.id}">
       <h2 class="kb-h"><span class="kb-no">${so2(k + 1)}</span>${esc(m.ten)}</h2>
       <div class="panel md-body">${m.html}</div>
     </section>`).join("");
 
-  const mucLuc = [`<a class="side-link" href="#bai-${n}/nguon">Nguồn &amp; mục tiêu</a>`]
+  const mucLuc = (mucTieu ? [`<a class="side-link" href="#bai-${n}/muc-tieu">Mục tiêu bài học</a>`] : [])
     .concat(B.muc.map((m, k) => `<a class="side-link" href="#bai-${n}/${m.id}"><span class="side-no">${so2(k + 1)}</span>${esc(m.ten)}</a>`))
     .concat(b.bank ? [`<a class="side-link" href="#bai-${n}/luyen">Luyện câu hỏi</a>`] : [])
     .join("");
@@ -151,7 +146,7 @@ function veBai(n) {
         <div class="side-head">Trong bài này</div>${mucLuc}
       </div></nav></aside>
       <div class="kb-body">
-        ${nguon}${muc}${lienQuan(b)}
+        ${mucTieu}${muc}${lienQuan(b)}
         <div class="lsn-done-row">
           <button class="btn lsn-done${daHoc(n) ? " is-on" : ""}" type="button" data-done aria-pressed="${daHoc(n)}">
             ${daHoc(n) ? "✓ Đã học bài này" : "Đánh dấu đã học"}</button>

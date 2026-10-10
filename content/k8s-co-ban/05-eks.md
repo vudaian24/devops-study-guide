@@ -8,6 +8,12 @@ bank: Kubernetes
 
 **Amazon EKS** (Elastic Kubernetes Service) là dịch vụ Kubernetes do AWS quản lý: AWS vận hành control plane (API server, etcd…) — vá lỗi, sao lưu, đảm bảo luôn sẵn sàng — còn bạn quản lý các **node** chạy ứng dụng. Ở các bài trước bạn đã thực hành trên Minikube; bài này tạo một cluster EKS thật bằng **eksctl** và triển khai Nginx ra Internet. Mọi file YAML đã viết đều chạy được trên EKS mà không cần sửa.
 
+Sau bài này bạn sẽ:
+
+- Đăng nhập AWS CLI an toàn và tạo được cluster EKS bằng eksctl.
+- Triển khai ứng dụng lên EKS và mở ra Internet qua Network Load Balancer.
+- Ước tính được chi phí và xoá sạch tài nguyên sau khi thực hành.
+
 > [!CAUTION]
 > Bài này tạo tài nguyên **tính tiền theo giờ**. Làm xong là xoá ngay theo Bước 5, và nên đặt cảnh báo chi phí (AWS Budgets) trước khi bắt đầu.
 
