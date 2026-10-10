@@ -1,6 +1,5 @@
 ---
 ten: CI/CD — tự động triển khai với GitHub Actions
-goc: https://devops.vn/posts/kubernetes-cicd-tu-dong-trien-khai/
 thoiGian: 45 phút
 chip: GitHub Actions, workflow, kind, image tag theo commit, rollout status, OIDC
 bank: Kubernetes, GitLab CI

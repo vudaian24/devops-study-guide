@@ -6,7 +6,7 @@
    fetch() file .md khi không có server. Nên nội dung viết bằng Markdown cho dễ sửa,
    rồi được gói thành một biến JS. Chỉ người SỬA nội dung cần Node; người đọc thì không.
 
-     content/<series>/series.json   { ten, nhan, tomTat, tacGia, noiDang, nguon, raSoat }
+     content/<series>/series.json   { ten, nhan, tomTat, raSoat }
      content/<series>/NN-*.md       mỗi file một bài, sắp theo tên file;
                                     đầu file là khối  ---\n key: value \n---  (bắt buộc có "ten")
 

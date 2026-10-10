@@ -12,7 +12,7 @@ node scripts/build-lessons.mjs --check   # kiểm tra file sinh ra còn khớp .
 
 ```
 content/<series>/
-├── series.json        { ten, nhan, tomTat, tacGia, noiDang, nguon, raSoat }
+├── series.json        { ten, nhan, tomTat, raSoat }
 ├── 01-<slug>.md       mỗi file một bài, thứ tự theo tên file
 └── 02-<slug>.md
 ```
@@ -22,7 +22,6 @@ content/<series>/
 ```
 ---
 ten: Tên bài (hiện ở tiêu đề, ngăn kéo, pager)
-goc: https://… link bài gốc
 thoiGian: 30 phút
 chip: Từ khoá, cách nhau, bằng dấu phẩy
 bank: Kubernetes, Networking        # chuDe trong js/data.js → khối "Luyện câu hỏi"
@@ -52,9 +51,3 @@ Callout (cú pháp alert của GitHub, nên file `.md` xem trên GitHub cũng đ
 | `> [!CAUTION]` | Nguy hiểm (mất tiền, mất dữ liệu, lộ bí mật) |
 
 Không hỗ trợ HTML thô và danh sách lồng nhau — mọi chữ đều được escape.
-
-## Bản quyền
-
-Series `k8s-co-ban` phỏng theo series *Kubernetes cơ bản* của tác giả Hữu Giang trên DevOps VietNam
-(<https://devops.vn/series/kubernetes-co-ban-mrzero/>). Nội dung đã được viết lại và cập nhật theo công cụ, thực hành hiện tại; mỗi bài
-dẫn link về bài gốc.

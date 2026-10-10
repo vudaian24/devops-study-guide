@@ -1,6 +1,5 @@
 ---
 ten: EKS — triển khai cluster trên AWS
-goc: https://devops.vn/posts/kubernetes-eks-aws-trien-khai-cluster/
 thoiGian: 45 phút (≈20 phút chờ tạo cluster)
 chip: Amazon EKS, eksctl, AWS CLI, managed node group, Network Load Balancer
 bank: Kubernetes

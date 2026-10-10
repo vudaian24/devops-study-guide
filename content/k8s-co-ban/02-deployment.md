@@ -1,6 +1,5 @@
 ---
 ten: Pod và Deployment — triển khai ứng dụng đầu tiên
-goc: https://devops.vn/posts/kubernetes-pod-deployment-trien-khai-ung-dung/
 thoiGian: 30 phút
 chip: Pod, Deployment, ReplicaSet, rolling update, rollback, probe
 bank: Kubernetes

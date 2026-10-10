@@ -1,6 +1,5 @@
 ---
 ten: Autoscaling — tối ưu hoá cluster hiệu quả
-goc: https://devops.vn/posts/kubernetes-autoscaling-toi-uu-hoa-cluster/
 thoiGian: 35 phút
 chip: metrics-server, HPA, requests/limits, behavior, Karpenter, KEDA, VPA
 bank: Kubernetes

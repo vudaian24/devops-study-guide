@@ -1,6 +1,5 @@
 ---
 ten: Service và Ingress — quản lý truy cập ứng dụng
-goc: https://devops.vn/posts/kubernetes-service-ingress-quan-ly-truy-cap/
 thoiGian: 35 phút
 chip: Service, ClusterIP, DNS, Ingress, ingressClassName, Gateway API
 bank: Kubernetes, Networking

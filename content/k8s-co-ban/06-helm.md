@@ -1,6 +1,5 @@
 ---
 ten: Helm — tự động triển khai ứng dụng dễ dàng
-goc: https://devops.vn/posts/kubernetes-helm-tu-dong-trien-khai/
 thoiGian: 35 phút
 chip: Helm, chart, values.yaml, release, upgrade, rollback, OCI
 bank: Kubernetes

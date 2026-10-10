@@ -1,6 +1,5 @@
 ---
 ten: Cài đặt Minikube và chạy Pod đầu tiên
-goc: https://devops.vn/posts/kubernetes-co-ban-cai-dat-minikube/
 thoiGian: 25 phút
 chip: Kubernetes, Minikube, kubectl, Pod
 bank: Kubernetes

@@ -1,6 +1,5 @@
 ---
 ten: ConfigMap và Secret — quản lý cấu hình ứng dụng
-goc: https://devops.vn/posts/kubernetes-configmap-secret-quan-ly-cau-hinh/
 thoiGian: 35 phút
 chip: ConfigMap, Secret, env, envFrom, volume, rollout restart
 bank: Kubernetes, Security

@@ -1,6 +1,5 @@
 ---
 ten: Monitoring — giám sát với Prometheus và Grafana
-goc: https://devops.vn/posts/kubernetes-monitoring-prometheus-grafana/
 thoiGian: 40 phút
 chip: Prometheus, Grafana, kube-prometheus-stack, PromQL, dashboard, PrometheusRule
 bank: Monitoring, Kubernetes
