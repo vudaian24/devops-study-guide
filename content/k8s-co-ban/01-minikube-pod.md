@@ -32,8 +32,8 @@ Minikube gói cả hai phần vào **một node** chạy trong Docker trên máy
 | Thành phần | Yêu cầu |
 |---|---|
 | CPU / RAM | Tối thiểu 2 CPU, 2 GB RAM trống. Nên có 4 CPU, 6 GB để làm trọn series (bài 8 cài Prometheus + Grafana) |
-| Docker | Docker Engine (Linux) hoặc Docker Desktop (macOS, Windows) **đang chạy** |
-| Hệ điều hành | Linux, macOS hoặc Windows (dùng PowerShell hoặc WSL2) |
+| Docker | Docker Engine **đang chạy** |
+| Hệ điều hành | Linux |
 
 Kiểm tra Docker đang chạy:
 
@@ -41,20 +41,14 @@ Kiểm tra Docker đang chạy:
 docker version
 ```
 
-Thấy cả hai phần `Client` và `Server` là được. Nếu chỉ có `Client` kèm lỗi *Cannot connect to the Docker daemon*, hãy mở Docker Desktop (hoặc `sudo systemctl start docker` trên Linux) rồi thử lại.
+Thấy cả hai phần `Client` và `Server` là được. Nếu chỉ có `Client` kèm lỗi *Cannot connect to the Docker daemon*, hãy chạy `sudo systemctl start docker` rồi thử lại.
 
 ## Bước 1: Cài đặt kubectl và Minikube
 
 - **kubectl**: công cụ dòng lệnh để làm việc với mọi cluster Kubernetes (Minikube, EKS, GKE…).
 - **Minikube**: công cụ dựng cluster trên máy cá nhân.
 
-**macOS** (cần [Homebrew](https://brew.sh/)):
-
-```bash
-brew install kubectl minikube
-```
-
-**Linux** — đoạn lệnh tự nhận kiến trúc máy (amd64 hoặc arm64):
+Đoạn lệnh tự nhận kiến trúc máy (amd64 hoặc arm64):
 
 ```bash
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
@@ -66,13 +60,6 @@ sudo install -m 0755 kubectl /usr/local/bin/kubectl
 # minikube
 curl -LO "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-${ARCH}"
 sudo install minikube-linux-${ARCH} /usr/local/bin/minikube
-```
-
-**Windows** (PowerShell):
-
-```powershell
-winget install Kubernetes.kubectl
-winget install Kubernetes.minikube
 ```
 
 Mở terminal mới rồi kiểm tra:
@@ -233,7 +220,7 @@ minikube delete
 
 | Hiện tượng | Nguyên nhân | Cách xử lý |
 |---|---|---|
-| `minikube start` báo không tìm thấy driver docker | Docker chưa chạy | Mở Docker Desktop / `sudo systemctl start docker`, rồi chạy lại |
+| `minikube start` báo không tìm thấy driver docker | Docker chưa chạy | `sudo systemctl start docker`, rồi chạy lại |
 | `The "docker" driver should not be used with root privileges` | Đang dùng user root trên Linux | Dùng user thường, thêm vào nhóm `docker` |
 | `kubectl` báo `connection refused` | Cluster đang dừng | `minikube start` |
 | Pod ở trạng thái `ImagePullBackOff` | Sai tên / tag image, hoặc mạng không tải được | `kubectl describe pod <tên>` xem Events, sửa image rồi `kubectl apply` lại |

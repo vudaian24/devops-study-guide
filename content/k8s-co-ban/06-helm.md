@@ -17,9 +17,7 @@ Sau bài này bạn sẽ:
 ## Bước 1: Cài đặt Helm và khởi động Minikube
 
 ```bash
-brew install helm                     # macOS
-sudo snap install helm --classic      # Linux (Ubuntu)
-winget install Helm.Helm              # Windows
+sudo snap install helm --classic      # Ubuntu
 ```
 
 Các cách cài khác: [Helm — Installing Helm](https://helm.sh/docs/intro/install/). Kiểm tra:

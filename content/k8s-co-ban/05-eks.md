@@ -27,14 +27,14 @@ Giá tham khảo vùng Singapore (`ap-southeast-1`), có thể thay đổi — k
 
 Cần ba công cụ: **AWS CLI**, **kubectl** (đã cài ở bài 1) và **eksctl**.
 
-**Cài AWS CLI** — xem hướng dẫn cho từng hệ điều hành tại [AWS CLI install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html). Trên macOS: `brew install awscli`.
+**Cài AWS CLI** — xem hướng dẫn cho Linux tại [AWS CLI install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
 **Đăng nhập AWS CLI.** Cách được khuyến nghị là **IAM Identity Center (SSO)** — thông tin đăng nhập là tạm thời và tự hết hạn:
 
 ```bash
 aws configure sso                   # làm một lần: nhập SSO start URL, region, chọn account và role
 aws sso login --profile hoc-k8s
-export AWS_PROFILE=hoc-k8s          # Windows PowerShell: $env:AWS_PROFILE="hoc-k8s"
+export AWS_PROFILE=hoc-k8s
 ```
 
 Kiểm tra đã đăng nhập đúng tài khoản:
@@ -57,10 +57,6 @@ aws sts get-caller-identity
 **Cài eksctl** — công cụ chính thức để tạo và quản lý cluster EKS:
 
 ```bash
-# macOS
-brew install eksctl
-
-# Linux
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 PLATFORM=$(uname -s)_$ARCH
 curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"

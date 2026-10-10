@@ -11,7 +11,7 @@ kèm các dòng CV mà bạn phải bảo vệ được khi bị hỏi sâu.
 Nhấp đúp vào `index.html`, hoặc:
 
 ```bash
-open index.html          # macOS (Linux: xdg-open)
+xdg-open index.html
 ```
 
 Không cần server, không cần build, chạy được offline. Cũng deploy thẳng lên GitHub Pages được

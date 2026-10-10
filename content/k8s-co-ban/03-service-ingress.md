@@ -2,7 +2,7 @@
 ten: Service và Ingress — quản lý truy cập ứng dụng
 goc: https://devops.vn/posts/kubernetes-service-ingress-quan-ly-truy-cap/
 thoiGian: 35 phút
-chip: Service, ClusterIP, DNS, Ingress, ingressClassName, minikube tunnel, Gateway API
+chip: Service, ClusterIP, DNS, Ingress, ingressClassName, Gateway API
 bank: Kubernetes, Networking
 ---
 
@@ -166,33 +166,16 @@ nginx-ingress   nginx   nginx.local   192.168.49.2   80      30s
 
 ## Bước 4: Truy cập ứng dụng qua tên miền
 
-Cách truy cập khác nhau theo hệ điều hành, vì trên macOS / Windows (Docker Desktop) máy bạn **không đi thẳng** được tới IP của node Minikube.
-
-**Linux:**
-
 ```bash
 curl -H "Host: nginx.local" http://$(minikube ip)/
 ```
 
-**macOS / Windows:** mở một terminal riêng và để lệnh này chạy suốt (sẽ hỏi mật khẩu để mở cổng 80/443):
+Lệnh trả về HTML của trang Nginx. Tham số `-H "Host: nginx.local"` giả lập việc truy cập bằng tên miền mà không cần sửa file hệ thống.
 
-```bash
-minikube tunnel
-```
-
-Rồi ở terminal khác:
-
-```bash
-curl -H "Host: nginx.local" http://127.0.0.1/
-```
-
-Cả hai trường hợp đều trả về HTML của trang Nginx. Tham số `-H "Host: nginx.local"` giả lập việc truy cập bằng tên miền mà không cần sửa file hệ thống.
-
-Muốn mở bằng trình duyệt tại `http://nginx.local`, thêm một dòng vào file hosts (`/etc/hosts` trên Linux/macOS, `C:\Windows\System32\drivers\etc\hosts` trên Windows — cần quyền admin):
+Muốn mở bằng trình duyệt tại `http://nginx.local`, thêm một dòng vào file `/etc/hosts` (cần `sudo`):
 
 ```text
-192.168.49.2  nginx.local      # Linux: thay bằng kết quả của lệnh minikube ip
-127.0.0.1     nginx.local      # macOS / Windows (khi minikube tunnel đang chạy)
+192.168.49.2  nginx.local      # thay bằng kết quả của lệnh minikube ip
 ```
 
 ## Bước 5: Xoá tài nguyên để dọn dẹp
@@ -217,7 +200,6 @@ Nếu đã sửa file hosts, xoá dòng `nginx.local` đi. Giữ lại các file
 |---|---|---|
 | `ENDPOINTS` của Service trống | `selector` không khớp nhãn Pod, hoặc Pod chưa Ready | So `kubectl get pods --show-labels` với `selector`; xem readiness probe |
 | Ingress không có `ADDRESS` | Controller chưa chạy, hoặc thiếu / sai `ingressClassName` | `kubectl get pods -n ingress-nginx`; `kubectl get ingressclass` để xem tên class đúng |
-| `curl` tới `minikube ip` bị treo (macOS / Windows) | Máy host không tới được mạng của Docker Desktop | Dùng `minikube tunnel` và gọi `127.0.0.1` |
 | Trả về `404 Not Found` của nginx | Request không khớp `host` của Ingress | Thêm `-H "Host: nginx.local"` hoặc sửa file hosts |
 | Trả về `503 Service Temporarily Unavailable` | Service không có Pod nào sẵn sàng phía sau | Kiểm tra EndpointSlice và trạng thái Pod |
 
